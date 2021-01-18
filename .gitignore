@@ -5,9 +5,9 @@
 *.iws
 *.classpath
 *.project
-/bin/
-/out/
-/.settings/
+bin
+out
+.settings
 
 # Ignore Gradle project-specific cache directory
 .gradle
