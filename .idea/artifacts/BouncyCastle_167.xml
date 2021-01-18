@@ -2,7 +2,7 @@
   <artifact type="jar" name="BouncyCastle-167">
     <output-path>$PROJECT_DIR$/out/artifacts/BouncyCastle_167</output-path>
     <root id="archive" name="BouncyCastle-167.jar">
-      <element id="library" level="project" name="BouncyCastle-jdk15on-167" />
+      <element id="library" level="project" name="BouncyCastle-167" />
     </root>
   </artifact>
 </component>
