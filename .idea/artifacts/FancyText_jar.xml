@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="FancyText:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/FancyText_jar</output-path>
+    <root id="archive" name="FancyText.jar">
+      <element id="archive" name="BouncyCastle-167.jar">
+        <element id="library" level="project" name="BouncyCastle-jdk15on-167" />
+      </element>
+      <element id="module-output" name="FancyText" />
+    </root>
+  </artifact>
+</component>

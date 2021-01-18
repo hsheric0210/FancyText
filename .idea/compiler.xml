@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <bytecodeTargetLevel>
+      <module name="IC2EnergyFix" target="1.8" />
+      <module name="IC2EnergyFix.api" target="1.8" />
+      <module name="IC2EnergyFix.main" target="1.8" />
+      <module name="IC2EnergyFix.test" target="1.8" />
+    </bytecodeTargetLevel>
+  </component>
+</project>
