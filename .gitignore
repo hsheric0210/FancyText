@@ -3,8 +3,8 @@
 *.iml
 *.ipr
 *.iws
-*.classpath
-*.project
+.classpath
+.project
 /bin/
 /out/
 /.settings/
