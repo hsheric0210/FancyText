@@ -1,10 +1,11 @@
-.idea/*
-!.idea/inspectionProfiles/
 *.iml
 *.ipr
 *.iws
-.classpath
-.project
+
+*.classpath
+*.project
+
+/.idea/
 /bin/
 /out/
 /.settings/
