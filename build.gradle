@@ -19,6 +19,8 @@ dependencies {
 	implementation fileTree(dir: 'libs', include: ['*.jar'])
 }
 
+compileJava.options.encoding = 'UTF-8'
+
 jar {
 	finalizedBy shadowJar
 	manifest {

@@ -12,7 +12,6 @@ import java.security.*;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -32,6 +31,10 @@ import org.bouncycastle.jcajce.spec.AEADParameterSpec;
 import org.bouncycastle.jcajce.spec.GOST28147ParameterSpec;
 
 import fancytext.Main;
+import fancytext.encrypt.symmetric.CipherAlgorithm;
+import fancytext.encrypt.symmetric.CipherAlgorithmMode;
+import fancytext.encrypt.symmetric.CipherAlgorithmPadding;
+import fancytext.encrypt.symmetric.CipherExceptionType;
 import fancytext.utils.CharsetWrapper;
 import fancytext.utils.MultiThreading;
 import fancytext.utils.PlainDocumentWithLimit;
@@ -69,607 +72,6 @@ public final class SymmetricKeyCipher extends JPanel
 	private final JSpinner rc5RoundsSpinner;
 	private final JComboBox<Integer> rijndaelBlockSizeCB;
 	private final JComboBox<Integer> cipherAlgorithmModeAEADTagLenCB;
-
-	private enum ExceptionType
-	{
-		NO_SUCH_ALGORITHM_PROVIDER("It seems your Java version is not supporting SunJCE or BouncyCastle correctly"),
-		UNSUPPORTED_CIPHER("Unsupported cipher algorithm"),
-		CORRUPTED_AEAD_TAG("Corrupted AEAD tag"),
-		BASE64_DECODE_EXCEPTION("Corrupted Base64 byte array"),
-		CORRUPTED_KEY_OR_INPUT("Corrupted key or input");
-
-		final String description;
-
-		ExceptionType(final String description)
-		{
-			this.description = description;
-		}
-	}
-
-	private class SymmetricKeyCryptionException extends GeneralSecurityException
-	{
-		private final ExceptionType type;
-		private final String algorithm;
-		private final String theProblem;
-		private final Throwable cause;
-
-		public SymmetricKeyCryptionException(final ExceptionType type, final Throwable cause)
-		{
-			this.type = type;
-			this.cause = cause;
-			algorithm = null;
-			theProblem = null;
-
-		}
-
-		public SymmetricKeyCryptionException(final ExceptionType type, final String algorithm, final Throwable cause)
-		{
-			this.type = type;
-			this.algorithm = algorithm;
-			this.cause = cause;
-			theProblem = null;
-		}
-
-		public SymmetricKeyCryptionException(final ExceptionType type, final String algorithm, final String problem, final Throwable cause)
-		{
-			this.type = type;
-			this.algorithm = algorithm;
-			theProblem = problem;
-			this.cause = cause;
-		}
-
-		@Override
-		public String toString()
-		{
-			final StringBuilder builder = new StringBuilder(64);
-			builder.append(getClass().getName()).append(":").append(Main.lineSeparator);
-
-			builder.append("* ERROR CODE ").append(type.ordinal()).append("(").append(type.name()).append(") - ").append(type.description).append(Main.lineSeparator);
-			builder.append("* Caused by ").append(cause).append(Main.lineSeparator);
-
-			Optional.ofNullable(algorithm).ifPresent(str -> builder.append("Algorithm: ").append(str).append(Main.lineSeparator));
-
-			Optional.ofNullable(theProblem).ifPresent(str -> builder.append(str).append(Main.lineSeparator));
-
-			builder.append(Main.lineSeparator);
-
-			return builder.toString();
-		}
-	}
-
-	private enum CipherAlgorithm
-	{
-		// <editor-fold desc="AES">
-		AES("AES", "Advanced Encryption Standard (a.k.a. AES)", 128, -1, -1, 96, 128, CipherAlgorithmMode.getJCEDefaults(), CipherAlgorithmPadding.getSunJCEDefaults(), "SunJCE", true, false, new int[]
-		{
-				128, 192, 256
-		}),
-		// </editor-fold>
-
-		// <editor-fold desc="-fish family">
-		BLOWFISH("Blowfish", "Blowfish", 64, 8, 448, 96, 128, CipherAlgorithmMode.getJCEDefaultsNoAEAD(), CipherAlgorithmPadding.getSunJCEDefaults(), "SunJCE", true, false, (int[]) null),
-		Twofish("Twofish", "Twofish", 128, 64, 256, 96, 128, CipherAlgorithmMode.getBCDefaults(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, (int[]) null),
-
-		Threefish("Threefish", "Threefish", -1, -1, -1, 96, 128, CipherAlgorithmMode.getBCDefaultsNoAEAD(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, new int[]
-		{
-				256, 512, 1024
-		}),
-		// </editor-fold>
-
-		// <editor-fold desc="DES family">
-		DES("DES", "DES", 64, 8, 64, 96, 128, CipherAlgorithmMode.getJCEDefaultsNoAEAD(), CipherAlgorithmPadding.getSunJCEDefaults(), "SunJCE", true, false, new int[]
-		{
-				64
-		}),
-
-		DES_EDE("DESede", "Triple-DES (a.k.a. DESede)", 64, -1, -1, 96, 128, CipherAlgorithmMode.getJCEDefaultsNoAEAD(), CipherAlgorithmPadding.getSunJCEDefaults(), "SunJCE", true, false, new int[]
-		{
-				192
-		}),
-		// </editor-fold>
-
-		// <editor-fold desc="Rivest cipher family">
-		RC2("RC2", "Rivest cipher 2 (a.k.a. RC2)", 64, 40, 1024, 96, 128, CipherAlgorithmMode.getJCEDefaultsNoAEAD(), CipherAlgorithmPadding.getSunJCEDefaults(), "SunJCE", true, false, (int[]) null),
-
-		ARC4("ARCFOUR", "Alleged RC4 (a.k.a. ARC4, ARCFOUR)", -1, 40, 1024, 96, 128, new CipherAlgorithmMode[]
-		{
-				CipherAlgorithmMode.ECB
-		}, new CipherAlgorithmPadding[]
-		{
-				CipherAlgorithmPadding.NONE
-		}, "SunJCE", true, false, (int[]) null),
-
-		RC5_32("RC5", "Rivest cipher 5 (a.k.a. RC5) - 32-bit mode", 128, 8, 2040, 96, 128, CipherAlgorithmMode.getBCDefaults(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, (int[]) null),
-
-		RC5_64("RC5-64", "Rivest cipher 5 (a.k.a. RC5) - 64-bit mode", 256, 8, 2040, 96, 128, CipherAlgorithmMode.getBCDefaultsNoAEAD(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, (int[]) null),
-
-		RC6("RC6", "Rivest cipher 6 (a.k.a. RC6)", 128, 8, -1, 96, 128, CipherAlgorithmMode.getBCDefaults(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, (int[]) null),
-		// </editor-fold>
-
-		// <editor-fold desc="ARIA">
-		ARIA("ARIA", "ARIA", 128, -1, -1, 96, 128, CipherAlgorithmMode.getBCDefaults(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, new int[]
-		{
-				128/* , 192, 256 */
-		}),
-		// </editor-fold>
-
-		// <editor-fold desc="Camellia">
-		Camellia("Camellia", "Camellia", 128, -1, -1, 96, 128, CipherAlgorithmMode.getBCDefaults(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, new int[]
-		{
-				128/* , 192, 256 */
-		}),
-		// </editor-fold>
-
-		// <editor-fold desc="CAST family">
-		CAST5("CAST5", "CAST-128 (a.k.a. CAST5)", 128, 8, 128, 96, 128, CipherAlgorithmMode.getBCDefaults(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, (int[]) null),
-
-		CAST6("CAST6", "CAST-256 (a.k.a. CAST6)", 256, 8, 256, 96, 128, CipherAlgorithmMode.getBCDefaultsNoAEAD(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, (int[]) null),
-		// </editor-fold>
-
-		// <editor-fold desc="ChaCha family">
-		ChaCha("CHACHA", "ChaCha", 64, -1, -1, 96, 128, new CipherAlgorithmMode[]
-		{
-				CipherAlgorithmMode.ECB
-		}, new CipherAlgorithmPadding[]
-		{
-				CipherAlgorithmPadding.NONE
-		}, "BC", true, true, new int[]
-		{
-				128, 256
-		}),
-
-		ChaCha7539("CHACHA7539", "ChaCha-7539", 96, -1, -1, 96, 128, new CipherAlgorithmMode[]
-		{
-				CipherAlgorithmMode.ECB
-		}, new CipherAlgorithmPadding[]
-		{
-				CipherAlgorithmPadding.NONE
-		}, "BC", true, true, new int[]
-		{
-				256
-		}),
-
-		ChaChaP1305("CHACHA20-POLY1305", "ChaCha-Poly1305", -1, -1, -1, 96, 128, CipherAlgorithmMode.getBCDefaultsNoAEAD(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, new int[]
-		{
-				256
-		}),
-		// </editor-fold>
-
-		// <editor-fold desc="DSTU7624">
-		DSTU7624("DSTU7624", "DSTU7624 (a.k.a. Kalyna)", -1, -1, -1, 96, 128, CipherAlgorithmMode.getBCDefaultsNoAEAD(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, new int[]
-		{
-				128, 256, 512
-		}),
-		// </editor-fold>
-
-		// <editor-fold desc="GOST3412-2015 (Kuznyechik)">
-		GOST3412_2015("GOST3412-2015", "GOST R 34.12-2015 (a.k.a Kuznyechik)", 128, -1, -1, 96, 128, CipherAlgorithmMode.getBCDefaults(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, new int[]
-		{
-				256
-		}),
-		// </editor-fold>
-
-		// <editor-fold desc="GOST28147 (Magma)">
-		GOST28147("GOST28147", "GOST 28147 (a.k.a. Magma)", 64, -1, -1, 96, 128, CipherAlgorithmMode.getBCDefaults(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, new int[]
-		{
-				256
-		}),
-		// </editor-fold>
-
-		// <editor-fold desc="Grain family">
-		Grain128("Grain128", "Grain-128", 96, 128, -1, 96, 128, new CipherAlgorithmMode[]
-		{
-				CipherAlgorithmMode.ECB
-		}, new CipherAlgorithmPadding[]
-		{
-				CipherAlgorithmPadding.NONE
-		}, "BC", true, true, (int[]) null),
-
-		Grainv1("Grainv1", "Grain-v1", 64, 80, -1, 96, 128, new CipherAlgorithmMode[]
-		{
-				CipherAlgorithmMode.ECB
-		}, new CipherAlgorithmPadding[]
-		{
-				CipherAlgorithmPadding.NONE
-		}, "BC", true, true, (int[]) null),
-		// </editor-fold>
-
-		// <editor-fold desc="HC- family">
-		HC128("HC128", "HC-128", 128, -1, -1, 96, 128, new CipherAlgorithmMode[]
-		{
-				CipherAlgorithmMode.ECB
-		}, new CipherAlgorithmPadding[]
-		{
-				CipherAlgorithmPadding.NONE
-		}, "BC", true, true, new int[]
-		{
-				128
-		}),
-
-		HC256("HC256", "HC-256", 256, -1, -1, 96, 128, new CipherAlgorithmMode[]
-		{
-				CipherAlgorithmMode.ECB
-		}, new CipherAlgorithmPadding[]
-		{
-				CipherAlgorithmPadding.NONE
-		}, "BC", true, true, new int[]
-		{
-				256
-		}),
-		// </editor-fold>
-
-		// <editor-fold desc="IDEA">
-		IDEA("IDEA", "International Data Encryption Algorithm (a.k.a. IDEA)", 64, 8, -1, 96, 128, CipherAlgorithmMode.getBCDefaultsNoAEAD(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, (int[]) null),
-		// </editor-fold>
-
-		// <editor-fold desc="NOEKEON">
-		Noekeon("NOEKEON", "NOEKEON", -1, 128, -1, 96, 128, new CipherAlgorithmMode[]
-		{
-				CipherAlgorithmMode.ECB
-		}, CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, (int[]) null),
-		// </editor-fold>
-
-		// <editor-fold desc="Rijndael">
-		Rijndael("RIJNDAEL", "Rijndael", 128, -1, -1, 32, 128, CipherAlgorithmMode.getBCDefaults(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, new int[]
-		{
-				128, 160, 192, 224, 256
-		}),
-		// </editor-fold>
-
-		// <editor-fold desc="Salsa20 family">
-		Salsa20("SALSA20", "Salsa20", 64, -1, -1, 96, 128, new CipherAlgorithmMode[]
-		{
-				CipherAlgorithmMode.ECB
-		}, new CipherAlgorithmPadding[]
-		{
-				CipherAlgorithmPadding.NONE
-		}, "BC", true, true, new int[]
-		{
-				128, 256
-		}),
-		XSalsa20("XSALSA20", "Salsa20 with 192-bit IV (a.k.a. XSalsa20)", 64, -1, -1, 96, 128, new CipherAlgorithmMode[]
-		{
-				CipherAlgorithmMode.ECB
-		}, new CipherAlgorithmPadding[]
-		{
-				CipherAlgorithmPadding.NONE
-		}, "BC", true, true, new int[]
-		{
-				256
-		}),
-		// </editor-fold>
-
-		// <editor-fold desc="SEED">
-		SEED("SEED", "SEED", 128, 128, 1024, 96, 128, CipherAlgorithmMode.getBCDefaults(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, (int[]) null),
-		// </editor-fold>
-
-		// <editor-fold desc="Serpent family">
-		Serpent("Serpent", "Serpent", 128, 64, 1024, 96, 128, CipherAlgorithmMode.getBCDefaults(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, (int[]) null),
-
-		Tnepres("Tnepres", "Tnepres (Serpent algorithm with several mistakes. Only exists for backward-compatibility.)", 128, 64, -1, 96, 128, CipherAlgorithmMode.getBCDefaults(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, (int[]) null),
-		// </editor-fold>
-
-		// <editor-fold desc="SHACAL-2">
-		SHACAL_2("SHACAL-2", "SHACAL-2", -1, -1, -1, 96, 128, CipherAlgorithmMode.getBCDefaultsNoAEAD(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, new int[]
-		{
-				128, 192, 256, 320, 384, 448, 512
-		}),
-		// </editor-fold>
-
-		// <editor-fold desc="Skipjack">
-		Skipjack("SKIPJACK", "Skipjack", 64, 80, 1024, 96, 128, CipherAlgorithmMode.getBCDefaultsNoAEAD(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, (int[]) null),
-		// </editor-fold>
-
-		// <editor-fold desc="SM4">
-		SM4("SM4", "SM4 (formerly SMS4)", 128, -1, -1, 96, 128, CipherAlgorithmMode.getBCDefaults(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, new int[]
-		{
-				128
-		}),
-		// </editor-fold>
-
-		// <editor-fold desc="TEA family">
-		TEA("TEA", "Tiny Encryption Algorithm (a.k.a. TEA)", 128, -1, -1, 96, 128, CipherAlgorithmMode.getBCDefaultsNoAEAD(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, new int[]
-		{
-				128
-		}),
-		XTEA("XTEA", "eXtended Tiny Encryption Algorithm (a.k.a. XTEA)", 128, -1, -1, 96, 128, CipherAlgorithmMode.getBCDefaultsNoAEAD(), CipherAlgorithmPadding.getBouncyCastleDefaults(), "BC", true, false, new int[]
-		{
-				128
-		}),
-		// </editor-fold>
-
-		// <editor-fold desc="VMPC family">
-		VMPC("VMPC", "Variably Modified Permutation Composition (a.k.a. VMPC)", 128, 8, -1, 96, 128, new CipherAlgorithmMode[]
-		{
-				CipherAlgorithmMode.ECB
-		}, new CipherAlgorithmPadding[]
-		{
-				CipherAlgorithmPadding.NONE
-		}, "BC", true, true, (int[]) null),
-
-		VMPCKSA3("VMPC-KSA3", "Variably Modified Permutation Composition (a.k.a. VMPC) with Key Scheduling Algorithm 3 (a.k.a. KSA3)", 128, 8, -1, 96, 128, new CipherAlgorithmMode[]
-		{
-				CipherAlgorithmMode.ECB
-		}, new CipherAlgorithmPadding[]
-		{
-				CipherAlgorithmPadding.NONE
-		}, "BC", true, true, (int[]) null),
-		// </editor-fold>
-
-		// <editor-fold desc="Zuc family">
-		Zuc128("Zuc-128", "Zuc-128", 128, -1, -1, 96, 128, new CipherAlgorithmMode[]
-		{
-				CipherAlgorithmMode.ECB
-		}, new CipherAlgorithmPadding[]
-		{
-				CipherAlgorithmPadding.NONE
-		}, "BC", true, true, new int[]
-		{
-				128
-		}),
-		Zuc256("Zuc-256", "Zuc-256", 200, -1, -1, 96, 128, new CipherAlgorithmMode[]
-		{
-				CipherAlgorithmMode.ECB
-		}, new CipherAlgorithmPadding[]
-		{
-				CipherAlgorithmPadding.NONE
-		}, "BC", true, true, new int[]
-		{
-				256
-		}),
-		// </editor-fold>
-
-		// <editor-fold desc="LEA">
-		LEA("LEA", "Lightweight Encryption Algorithm (a.k.a. LEA)", 128, -1, -1, 8, 16, new CipherAlgorithmMode[]
-		{
-				CipherAlgorithmMode.ECB, CipherAlgorithmMode.CBC, CipherAlgorithmMode.CFB, CipherAlgorithmMode.OFB, CipherAlgorithmMode.CTS, CipherAlgorithmMode.CCM, CipherAlgorithmMode.GCM
-		}, new CipherAlgorithmPadding[]
-		{
-				CipherAlgorithmPadding.NONE, CipherAlgorithmPadding.PKCS5
-		}, null, true, true, new int[]
-		{
-				128, 256
-		});
-		// </editor-fold>
-
-		private final String id;
-		private final String displayName;
-		private final int blocksize;
-		private final int minKeySize;
-		private final int maxKeySize;
-		private final CipherAlgorithmMode[] supportMode;
-		private final CipherAlgorithmPadding[] supportPadding;
-		private final String providerName;
-		private final int[] availableKeySizes;
-		private final boolean paddedInputRequired;
-		private final boolean streamCipher;
-		private final int minAEADTagLength;
-		private final int maxAEADTagLength;
-
-		CipherAlgorithm(final String id, final String displayName, final int blocksize, final int minKeySize, final int maxKeySize, final int minAEADTagLength, final int maxAEADTagLength, final CipherAlgorithmMode[] supportedModes, final CipherAlgorithmPadding[] supportedPaddings, final String providerName, final boolean paddedInputRequired, final boolean streamCipher, final Function<?, int[]> availableKeySizes)
-		{
-			this(id, displayName, blocksize, minKeySize, maxKeySize, minAEADTagLength, maxAEADTagLength, supportedModes, supportedPaddings, providerName, paddedInputRequired, streamCipher, Optional.ofNullable(availableKeySizes).map(keySizes -> keySizes.apply(null)).orElse(null));
-		}
-
-		CipherAlgorithm(final String id, final String displayName, final int blocksize, final int minKeySize, final int maxKeySize, final int minAEADTagLength, final int maxAEADTagLength, final CipherAlgorithmMode[] supportedModes, final CipherAlgorithmPadding[] supportedPaddings, final String providerName, final boolean paddedInputRequired, final boolean streamCipher, final int[] availableKeySizes)
-		{
-			this.id = id;
-			this.displayName = displayName;
-			this.blocksize = blocksize;
-			this.minKeySize = minKeySize;
-			this.maxKeySize = maxKeySize;
-			supportMode = supportedModes;
-			supportPadding = supportedPaddings;
-			this.providerName = providerName;
-			this.availableKeySizes = availableKeySizes;
-			this.paddedInputRequired = paddedInputRequired;
-			this.streamCipher = streamCipher; // Which always require IV
-			this.minAEADTagLength = minAEADTagLength;
-			this.maxAEADTagLength = maxAEADTagLength;
-		}
-
-		String getId()
-		{
-			return id;
-		}
-
-		int getBlocksize()
-		{
-			return blocksize;
-		}
-
-		int getMinKeySize()
-		{
-			return minKeySize;
-		}
-
-		int getMaxKeySize()
-		{
-			return maxKeySize;
-		}
-
-		CipherAlgorithmMode[] getSupportedModes()
-		{
-			return supportMode;
-		}
-
-		CipherAlgorithmPadding[] getSupportedPaddings()
-		{
-			return supportPadding;
-		}
-
-		String getProviderName()
-		{
-			return providerName;
-		}
-
-		int[] getAvailableKeySizes()
-		{
-			return availableKeySizes;
-		}
-
-		Integer[] getAvailableKeySizesBoxed()
-		{
-			final Integer[] keySizes = new Integer[availableKeySizes.length];
-			int j = 0;
-			for (final int i : availableKeySizes)
-				keySizes[j++] = i;
-
-			return keySizes;
-		}
-
-		boolean isPaddedInputRequired()
-		{
-			return paddedInputRequired;
-		}
-
-		boolean isStreamCipher()
-		{
-			return streamCipher;
-		}
-
-		@Override
-		public String toString()
-		{
-			return displayName;
-		}
-
-		int getMinAEADTagLength()
-		{
-			return minAEADTagLength;
-		}
-
-		int getMaxAEADTagLength()
-		{
-			return maxAEADTagLength;
-		}
-	}
-
-	private enum CipherAlgorithmMode
-	{
-		ECB(false, false, false),
-		CBC(true, false, false),
-		CFB(true, false, false),
-		OFB(true, false, false),
-		PCBC(true, false, false),
-		CTR(true, false, false),
-		CTS(true, false, false),
-		CCM(true, true, true),
-		GCM(true, true, true);
-
-		private final boolean isUsingIV;
-		private final boolean isUsingNonce;
-		private final boolean isAEADMode;
-
-		private static final CipherAlgorithmMode[] jceDefault =
-		{
-				ECB, CBC, CFB, OFB, PCBC, CTR, CTS, GCM
-		};
-
-		private static final CipherAlgorithmMode[] jceDefaultNoAEAD =
-		{
-				ECB, CBC, CFB, OFB, PCBC, CTR, CTS
-		};
-
-		private static final CipherAlgorithmMode[] bcDefault =
-		{
-				ECB, CBC, CFB, OFB, CTR, CTS, CCM, GCM
-		};
-
-		private static final CipherAlgorithmMode[] bcDefaultNoAEAD =
-		{
-				ECB, CBC, CFB, OFB, CTR, CTS, CCM, GCM
-		};
-
-		CipherAlgorithmMode(final boolean usingIV, final boolean usingNonce, final boolean AEAD)
-		{
-			isUsingIV = usingIV;
-			isUsingNonce = usingNonce;
-			isAEADMode = AEAD;
-		}
-
-		boolean isUsingIV()
-		{
-			return isUsingIV;
-		}
-
-		private boolean isUsingNonce()
-		{
-			return isUsingNonce;
-		}
-
-		boolean isAEADMode()
-		{
-			return isAEADMode;
-		}
-
-		static CipherAlgorithmMode[] getJCEDefaults()
-		{
-			return jceDefault;
-		}
-
-		static CipherAlgorithmMode[] getJCEDefaultsNoAEAD()
-		{
-			return jceDefaultNoAEAD;
-		}
-
-		static CipherAlgorithmMode[] getBCDefaults()
-		{
-			return bcDefault;
-		}
-
-		static CipherAlgorithmMode[] getBCDefaultsNoAEAD()
-		{
-			return bcDefaultNoAEAD;
-		}
-	}
-
-	private enum CipherAlgorithmPadding
-	{
-		NONE("NoPadding", "None"),
-		ZERO_FILL("ZeroBytePadding", "Zero-fill padding"),
-		PKCS5("PKCS5Padding", "PKCS #5 / PKCS #7 padding"),
-		ISO10126("ISO10126Padding", "ISO 10126-2 padding"),
-		X923("X923Padding", "x9.23 padding"),
-		ISO7816_4("ISO7816-4Padding", "ISO 7816-4 / ISO 9797-1 padding"),
-		TBC("TBCPadding", "Trailing-Bit-Compliment(TBC) padding");
-
-		private final String paddingName;
-		private final String displayName;
-
-		private static final CipherAlgorithmPadding[] SunJceDefault =
-		{
-				NONE, PKCS5, ISO10126
-		};
-		private static final CipherAlgorithmPadding[] BCDefault = values();
-
-		CipherAlgorithmPadding(final String paddingName, final String displayName)
-		{
-			this.paddingName = paddingName;
-			this.displayName = displayName;
-		}
-
-		private String getPaddingName()
-		{
-			return paddingName;
-		}
-
-		@Override
-		public String toString()
-		{
-			return displayName;
-		}
-
-		static CipherAlgorithmPadding[] getSunJCEDefaults()
-		{
-			return SunJceDefault;
-		}
-
-		static CipherAlgorithmPadding[] getBouncyCastleDefaults()
-		{
-			return BCDefault;
-		}
-	}
 
 	public SymmetricKeyCipher()
 	{
@@ -1207,7 +609,7 @@ public final class SymmetricKeyCipher extends JPanel
 
 		// Padding character field panel - Padding character field
 		paddingCharField = new JTextField();
-		paddingCharField.setToolTipText("The padding character will be pad insufficient characters in the secret key and the IV (If cipher algorithm padding is NONE, it will be pad plain-text also.)");
+		paddingCharField.setToolTipText("The padding character will be clamp insufficient characters in the secret key and the IV (If cipher algorithm padding is NONE, it will be clamp plain-text also.)");
 		final GridBagConstraints gbc_paddingCharField = new GridBagConstraints();
 		gbc_paddingCharField.ipadx = 20;
 		gbc_paddingCharField.fill = GridBagConstraints.HORIZONTAL;
@@ -1367,7 +769,7 @@ public final class SymmetricKeyCipher extends JPanel
 		gbc_encryptedFileFindButton.gridy = 0;
 		encryptedFilePanel.add(encryptedFileFindButton, gbc_encryptedFileFindButton);
 
-		// Cipher settings panel - Cipher algorithm pad panel
+		// Cipher settings panel - Cipher algorithm clamp panel
 		final JPanel cipherAlgorithmPaddingPanel = new JPanel();
 		cipherAlgorithmPaddingPanel.setBorder(new TitledBorder(null, "Cipher algorithm padding", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		final GridBagConstraints gbc_cipherAlgorithmPaddingPanel = new GridBagConstraints();
@@ -1397,7 +799,7 @@ public final class SymmetricKeyCipher extends JPanel
 		};
 		cipherAlgorithmPaddingPanel.setLayout(gbl_cipherAlgorithmPaddingPanel);
 
-		// Cipher settings panel - Cipher algorithm pad panel - Cipher algorithm pad check box
+		// Cipher settings panel - Cipher algorithm clamp panel - Cipher algorithm clamp check box
 		cipherAlgorithmPaddingCB = new JComboBox<>();
 		final GridBagConstraints gbc_cipherAlgorithmPaddingCB = new GridBagConstraints();
 		gbc_cipherAlgorithmPaddingCB.anchor = GridBagConstraints.PAGE_START;
@@ -1635,7 +1037,7 @@ public final class SymmetricKeyCipher extends JPanel
 		cipherAlgorithmCB.setModel(new DefaultComboBoxModel<>(CipherAlgorithm.values()));
 		cipherAlgorithmCB.setSelectedItem(CipherAlgorithm.AES);
 
-		cipherAlgorithmModeCB.setModel(new DefaultComboBoxModel<>(CipherAlgorithmMode.getJCEDefaults()));
+		cipherAlgorithmModeCB.setModel(new DefaultComboBoxModel<>(CipherAlgorithmMode.sunJCEDefaults()));
 		cipherAlgorithmModeCB.setSelectedItem(CipherAlgorithmMode.CBC); // CBC mode is default mode
 
 		cipherAlgorithmPaddingCB.setModel(new DefaultComboBoxModel<>(new CipherAlgorithmPadding[]
@@ -2176,18 +1578,62 @@ public final class SymmetricKeyCipher extends JPanel
 		return encryptedTextField.getText().getBytes(StandardCharsets.ISO_8859_1);
 	}
 
+	private byte[] getKey(final CipherAlgorithm cipherAlgorithm, final char paddingChar)
+	{
+		final Charset charset = Optional.ofNullable((CharsetWrapper) keyTextCharsetCB.getSelectedItem()).orElse(CharsetWrapper.UTF_8).getCharset();
+
+		final int defaultKeyLength = cipherAlgorithm.getAvailableKeySizes() != null ? (int) Optional.ofNullable(keySizeCB.getSelectedItem()).orElse(256) / 8 : -1;
+		final int minKeySize = cipherAlgorithm.getMinKeySize();
+		final int maxKeySize = cipherAlgorithm.getMaxKeySize();
+		final int minKeyLength = minKeySize > 0 ? minKeySize : defaultKeyLength;
+		final int maxKeyLength = maxKeySize > 0 ? maxKeySize : defaultKeyLength;
+
+		final String keyString = keyTextField.getText();
+
+		if (keyString == null || keyString.isEmpty())
+			return null;
+
+		final String paddedKeyString = clamp(charset, keyString, minKeyLength, maxKeyLength, paddingChar);
+		final byte[] keyBytes = paddedKeyString.getBytes(charset);
+		final int keyBytesSize = keyBytes.length;
+
+		Main.LOGGER.info(String.format("key[%d]: \"%s\" -> paddedKey[%d]: \"%s\" - %d bytes (%d bits)", keyString.length(), keyString, paddedKeyString.length(), paddedKeyString, keyBytesSize, keyBytesSize << 3));
+
+		return keyBytes;
+	}
+
+	private byte[] getInitialVector(final CipherAlgorithm cipherAlg, final CipherAlgorithmMode cipherMode, final char paddingChar, final int cipherBlockSize)
+	{
+		final Charset charset = Optional.ofNullable((CharsetWrapper) ivTextCharsetCB.getSelectedItem()).orElse(CharsetWrapper.UTF_8).getCharset();
+
+		int ivSize = cipherBlockSize;
+		if (cipherAlg == CipherAlgorithm.XSalsa20)
+			ivSize = 24; // XSalsa20 requires exactly 24 bytes of IV
+		else if (cipherMode == CipherAlgorithmMode.CCM)
+			ivSize = 13; // nonce must have length from 7 to 13 octets
+		else if (cipherAlg == CipherAlgorithm.LEA && cipherMode == CipherAlgorithmMode.GCM)
+			ivSize = 12;
+
+		if (ivSize == 0)
+			ivSize = cipherAlg.getBlocksize() / 8;
+
+		final String ivString = ivTextField.getText();
+
+		final String paddedIV = clamp(charset, ivString, ivSize, ivSize, paddingChar);
+		final byte[] ivBytes = paddedIV.getBytes(charset);
+		final int ivBytesSize = ivBytes.length;
+
+		Main.LOGGER.info(String.format("iv[%d]: \"%s\" -> paddedIV[%d]: \"%s\" - %d bytes (%d bits)", ivString.length(), ivString, paddedIV.length(), paddedIV, ivBytesSize, ivBytesSize << 3));
+
+		return ivBytes;
+	}
+
 	byte[] doEncrypt(byte[] plainBytes) throws SymmetricKeyCryptionException
 	{
-		// <editor-fold desc="Charsets setup">
-		final Charset charset = Optional.ofNullable((CharsetWrapper) plainTextCharsetCB.getSelectedItem()).orElse(CharsetWrapper.UTF_8).getCharset();
-		final Charset keyCharset = Optional.ofNullable((CharsetWrapper) keyTextCharsetCB.getSelectedItem()).orElse(CharsetWrapper.UTF_8).getCharset();
-		final Charset ivCharset = Optional.ofNullable((CharsetWrapper) ivTextCharsetCB.getSelectedItem()).orElse(CharsetWrapper.UTF_8).getCharset();
-		// </editor-fold>
-
 		if (plainBytes == null || plainBytes.length == 0)
 			return null;
 
-		final int plainBytesSize = plainBytes.length;
+		final Charset charset = Optional.ofNullable((CharsetWrapper) plainTextCharsetCB.getSelectedItem()).orElse(CharsetWrapper.UTF_8).getCharset();
 
 		// <editor-fold desc="Cipher settings">
 		final CipherAlgorithm cipherAlg = Optional.ofNullable((CipherAlgorithm) cipherAlgorithmCB.getSelectedItem()).orElse(CipherAlgorithm.AES);
@@ -2199,16 +1645,7 @@ public final class SymmetricKeyCipher extends JPanel
 		// <editor-fold desc="Key sizes">
 		int keySizeBytes = -1;
 		if (cipherAlg.getAvailableKeySizes() != null)
-			keySizeBytes = (int) Optional.ofNullable(keySizeCB.getSelectedItem()).orElse(256) / 8; // 8 bit = 1 byte
-
-		int minKeySizeBytes = keySizeBytes;
-		int maxKeySizeBytes = keySizeBytes;
-
-		// If cipher algorithm dependant key size is available, Use it instead.
-		if (cipherAlg.getMinKeySize() != -1)
-			minKeySizeBytes = cipherAlg.getMinKeySize() / 8; // 8 bit = 1 byte
-		if (cipherAlg.getMaxKeySize() != -1)
-			maxKeySizeBytes = cipherAlg.getMaxKeySize() / 8; // 8 bit = 1 byte
+			keySizeBytes = (int) Optional.ofNullable(keySizeCB.getSelectedItem()).orElse(256) / 8;
 		// </editor-fold>
 
 		// Misc. options
@@ -2216,30 +1653,17 @@ public final class SymmetricKeyCipher extends JPanel
 		final boolean encodeEncrypted = base64EncryptedText.isSelected();
 		final String paddingCharFieldText = paddingCharField.getText();
 
-		// <editor-fold desc="Key and IV">
-		String key = keyTextField.getText();
-		int keyLength, keyBytesSize;
-
-		String iv = ivTextField.getText();
-		int ivLength = 0, ivBytesSize = 0;
-		// </editor-fold>
-
 		// Check the resources
-		if (key == null || key.isEmpty() || usingIV && (iv == null || iv.isEmpty()) || paddingCharFieldText == null || paddingCharFieldText.isEmpty())
+		if (paddingCharFieldText == null || paddingCharFieldText.isEmpty())
 			return null;
-
-		String plain4Compat = new String(plainBytes, charset);
 
 		final char paddingChar = paddingCharField.getText().charAt(0);
 
-		// Key pad
-		key = pad(keyCharset, key, minKeySizeBytes, maxKeySizeBytes, paddingChar);
-
-		final String cipherAlgorithm = getFixedAlgorithm(cipherAlg, cipherMode, cipherPadding, keySizeBytes, cipherUnitBytes);
+		final String cipherAlgorithm = getAlgorithmString(cipherAlg, cipherMode, cipherPadding, keySizeBytes, cipherUnitBytes);
 
 		final boolean isLEA = cipherAlg == CipherAlgorithm.LEA;
-		final boolean isRijndael = cipherAlg == CipherAlgorithm.Rijndael;
 
+		final boolean isRijndael = cipherAlg == CipherAlgorithm.Rijndael;
 		final int rijndaelBlockSize = (int) Optional.ofNullable(rijndaelBlockSizeCB.getSelectedItem()).orElse(256);
 
 		try
@@ -2281,13 +1705,11 @@ public final class SymmetricKeyCipher extends JPanel
 			dumpCipherAlgorithm(cipherAlg, cipherMode, cipherPadding);
 
 			// <editor-fold desc="Create SecretKeySpec">
-			final byte[] keyBytes = key.getBytes(keyCharset);
-			keyLength = key.length();
-			keyBytesSize = keyBytes.length;
+			final byte[] keyBytes = getKey(cipherAlg, paddingChar);
 			final Key keySpec = new SecretKeySpec(keyBytes, cipherAlg.getId());
 			// </editor-fold>
 
-			// <editor-fold desc="Plain-text pad">
+			// <editor-fold desc="Plain-text clamp">
 			if (cipherPadding == CipherAlgorithmPadding.NONE && !cipherMode.isAEADMode() && cipherAlg.isPaddedInputRequired() && cipherBlockSize > 0 && plainBytes.length % cipherBlockSize != 0)
 			{
 				final String plainStr = new String(plainBytes, charset); // Convert the byte array to the string
@@ -2303,7 +1725,7 @@ public final class SymmetricKeyCipher extends JPanel
 				final byte[] paddedBytes = pad.getBytes(charset);
 				System.arraycopy(paddedBytes, 0, plainBytes, 0, paddedBytes.length);
 
-				// TODO: I know applying the pad characters after converting the byte array to the string is the worst solution ever. Please someone fix it later. Or disable the auto-pad for No_Padding option.
+				// TODO: I know applying the clamp characters after converting the byte array to the string is the worst solution ever. Please someone fix it later. Or disable the auto-clamp for No_Padding option.
 			}
 			// </editor-fold>
 
@@ -2312,25 +1734,7 @@ public final class SymmetricKeyCipher extends JPanel
 
 			if (usingIV)
 			{
-				// Initialize IV(or Counter)
-				int ivSize = cipherBlockSize;
-
-				if (cipherAlg == CipherAlgorithm.XSalsa20)
-					ivSize = 24; // XSalsa20 requires exactly 24 bytes of IV
-				else if (cipherMode == CipherAlgorithmMode.CCM)
-					ivSize = 13; // nonce must have length from 7 to 13 octets
-				else if (cipherAlg == CipherAlgorithm.LEA && cipherMode == CipherAlgorithmMode.GCM)
-					ivSize = 12;
-
-				if (ivSize == 0)
-					ivSize = cipherAlg.getBlocksize() / 8;
-
-				// IV pad
-				iv = pad(ivCharset, iv, ivSize, ivSize, paddingChar);
-
-				ivBytes = iv.getBytes(ivCharset);
-				ivLength = iv.length();
-				ivBytesSize = ivBytes.length;
+				ivBytes = getInitialVector(cipherAlg, cipherMode, paddingChar, cipherBlockSize);
 			}
 			// </editor-fold>
 
@@ -2366,10 +1770,8 @@ public final class SymmetricKeyCipher extends JPanel
 			}
 			// </editor-fold>
 
-			dumpKeyAndIV(key, keyLength, keyBytesSize, iv, ivLength, ivBytesSize);
-
 			// <editor-fold desc="Initialize the cipher and encrypt">
-			byte[] encryptedBytes;
+			final byte[] encryptedBytes;
 			if (isLEA)
 				if (leaAEADCipher == null)
 				{
@@ -2440,19 +1842,19 @@ public final class SymmetricKeyCipher extends JPanel
 		}
 		catch (final NoSuchProviderException e)
 		{
-			throw new SymmetricKeyCryptionException(ExceptionType.NO_SUCH_ALGORITHM_PROVIDER, cipherAlgorithm, e);
+			throw new SymmetricKeyCryptionException(CipherExceptionType.NO_SUCH_ALGORITHM_PROVIDER, cipherAlgorithm, e);
 		}
 		catch (final NoSuchAlgorithmException | NoSuchPaddingException e)
 		{
-			throw new SymmetricKeyCryptionException(ExceptionType.UNSUPPORTED_CIPHER, cipherAlgorithm, e);
+			throw new SymmetricKeyCryptionException(CipherExceptionType.UNSUPPORTED_CIPHER, cipherAlgorithm, e);
 		}
 		catch (final DataLengthException | AEADBadTagException e)
 		{
-			throw new SymmetricKeyCryptionException(ExceptionType.CORRUPTED_AEAD_TAG, e);
+			throw new SymmetricKeyCryptionException(CipherExceptionType.CORRUPTED_AEAD_TAG, e);
 		}
 		catch (final IllegalStateException | IllegalArgumentException | ArrayIndexOutOfBoundsException | IllegalBlockSizeException | BadPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | InvalidCipherTextException | NegativeArraySizeException e)
 		{
-			throw new SymmetricKeyCryptionException(ExceptionType.CORRUPTED_KEY_OR_INPUT, e);
+			throw new SymmetricKeyCryptionException(CipherExceptionType.CORRUPTED_KEY_OR_INPUT, e);
 		}
 	}
 
@@ -2512,14 +1914,14 @@ public final class SymmetricKeyCipher extends JPanel
 			}
 			catch (final IllegalArgumentException e)
 			{
-				throw new SymmetricKeyCryptionException(ExceptionType.BASE64_DECODE_EXCEPTION, null, "Base64-bytearray: " + new String(encryptedBytes, StandardCharsets.UTF_8), e);
+				throw new SymmetricKeyCryptionException(CipherExceptionType.BASE64_DECODE_EXCEPTION, null, "Base64-bytearray: " + new String(encryptedBytes, StandardCharsets.UTF_8), e);
 			}
 		// </editor-fold>
 
-		// Key pad
-		key = pad(keyCharset, key, minKeySizeBytes, maxKeySizeBytes, paddingChar);
+		// Key clamp
+		key = clamp(keyCharset, key, minKeySizeBytes, maxKeySizeBytes, paddingChar);
 
-		final String cipherAlgorithm = getFixedAlgorithm(cipherAlg, cipherMode, cipherPadding, keySizeBytes, cipherUnitBytes);
+		final String cipherAlgorithm = getAlgorithmString(cipherAlg, cipherMode, cipherPadding, keySizeBytes, cipherUnitBytes);
 		final int stringByteArrayLength = encryptedBytes.length;
 
 		final boolean isLEA = cipherAlg == CipherAlgorithm.LEA;
@@ -2575,19 +1977,7 @@ public final class SymmetricKeyCipher extends JPanel
 			byte[] ivBytes = null;
 			if (usingIV)
 			{
-				int ivSize = cipherBlockSize;
-
-				if (cipherAlg == CipherAlgorithm.XSalsa20)
-					ivSize = 24; // XSalsa20 requires exactly 24 bytes of IV
-				else if (cipherMode == CipherAlgorithmMode.CCM)
-					ivSize = 13; // nonce must have length from 7 to 13 octets
-				else if (cipherAlg == CipherAlgorithm.LEA && cipherMode == CipherAlgorithmMode.GCM)
-					ivSize = 12;
-
-				if (ivSize == 0)
-					ivSize = cipherAlg.getBlocksize() / 8;
-
-				iv = pad(ivCharset, iv, ivSize, ivSize, paddingChar);
+				iv = getInitialVector(ivCharset, cipherAlg, cipherMode, iv, paddingChar, cipherBlockSize);
 
 				ivBytes = iv.getBytes(ivCharset);
 				ivLength = iv.length();
@@ -2689,31 +2079,25 @@ public final class SymmetricKeyCipher extends JPanel
 		}
 		catch (final NoSuchProviderException e)
 		{
-			throw new SymmetricKeyCryptionException(ExceptionType.NO_SUCH_ALGORITHM_PROVIDER, cipherAlgorithm, e);
+			throw new SymmetricKeyCryptionException(CipherExceptionType.NO_SUCH_ALGORITHM_PROVIDER, cipherAlgorithm, e);
 		}
 		catch (final NoSuchAlgorithmException | NoSuchPaddingException e)
 		{
-			throw new SymmetricKeyCryptionException(ExceptionType.UNSUPPORTED_CIPHER, cipherAlgorithm, e);
+			throw new SymmetricKeyCryptionException(CipherExceptionType.UNSUPPORTED_CIPHER, cipherAlgorithm, e);
 		}
 		catch (final DataLengthException | AEADBadTagException e)
 		{
-			throw new SymmetricKeyCryptionException(ExceptionType.CORRUPTED_AEAD_TAG, e);
+			throw new SymmetricKeyCryptionException(CipherExceptionType.CORRUPTED_AEAD_TAG, e);
 		}
 		catch (final IllegalStateException | IllegalArgumentException | ArrayIndexOutOfBoundsException | IllegalBlockSizeException | BadPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | InvalidCipherTextException | NegativeArraySizeException e)
 		{
-			throw new SymmetricKeyCryptionException(ExceptionType.CORRUPTED_KEY_OR_INPUT, e);
+			throw new SymmetricKeyCryptionException(CipherExceptionType.CORRUPTED_KEY_OR_INPUT, e);
 		}
 	}
 
 	private static void dumpCipherAlgorithm(final CipherAlgorithm alg, final CipherAlgorithmMode mode, final CipherAlgorithmPadding padding)
 	{
 		Main.LOGGER.info(String.format("algorithm: %s(%s) (provider: %s) / mode: %s / padding: %s(%s)", alg, alg.getId(), alg.getProviderName(), mode, padding, padding.getPaddingName()));
-	}
-
-	private static void dumpKeyAndIV(final String key, final int keyLength, final int keyBytesSize, final String iv, final int ivLength, final int ivBytesSize)
-	{
-		Main.LOGGER.info(String.format("key: \"%s\" - %d characters, %d bytes (%d bits)", key, keyLength, keyBytesSize, keyBytesSize << 3));
-		Main.LOGGER.info(String.format("iv: \"%s\" - %d characters, %d bytes (%d bits)", iv, ivLength, ivBytesSize, ivBytesSize << 3));
 	}
 
 	private static BlockCipherMode getLEACipher(final CipherAlgorithmMode mode)
@@ -2751,39 +2135,51 @@ public final class SymmetricKeyCipher extends JPanel
 		return null;
 	}
 
-	private static String pad(final Charset charset, final String msg, final int minByteSize, final int maxByteSize, final char paddingChar)
+	/**
+	 * @param  charset
+	 *                     Charset used while padding
+	 * @param  string
+	 *                     String to apply truncation/pad
+	 * @param  minLength
+	 *                     Minimum string length; If the message length is shorter than this parameter, padding characters will be added to the tail of message to fill the space
+	 * @param  maxLength
+	 *                     Maximum string length; If the message length is loger than this parameter, the message will be truncated
+	 * @param  paddingChar
+	 *                     Padding character
+	 * @return             The truncated/padded string
+	 */
+	private static String clamp(final Charset charset, final String string, final int minLength, final int maxLength, final char paddingChar)
 	{
-		final byte[] original = msg.getBytes(charset);
+		final byte[] original = string.getBytes(charset);
 
-		if (maxByteSize != -1 && original.length > maxByteSize)
+		if (maxLength != -1 && original.length > maxLength)
 		{
-			final byte[] fixed = new byte[maxByteSize];
-
-			System.arraycopy(original, 0, fixed, 0, maxByteSize);
-			return new String(fixed, charset);
+			// Truncation
+			final byte[] truncated = new byte[maxLength];
+			System.arraycopy(original, 0, truncated, 0, maxLength);
+			return new String(truncated, charset);
 		}
-		if (original.length < minByteSize)
+		if (original.length < minLength)
 		{
-			final byte[] fixed = new byte[minByteSize];
-
-			System.arraycopy(original, 0, fixed, 0, original.length);
-//			Arrays.fill(fixed, original.length - 1, fixed.length, String.valueOf(paddingChar).getBytes(charset.getCharset()));
+			// Pad
+			final byte[] padded = new byte[minLength];
+			System.arraycopy(original, 0, padded, 0, original.length);
 			final byte[] paddingCharBytes = String.valueOf(paddingChar).getBytes(charset);
 			int index = original.length;
-			final int indexLimit = fixed.length;
+			final int indexLimit = padded.length;
 			while (index < indexLimit)
 			{
-				System.arraycopy(paddingCharBytes, 0, fixed, index, Math.min(indexLimit - index, paddingCharBytes.length));
+				System.arraycopy(paddingCharBytes, 0, padded, index, Math.min(indexLimit - index, paddingCharBytes.length));
 				index += paddingCharBytes.length;
 			}
 
-			return new String(fixed, charset);
+			return new String(padded, charset);
 		}
 
-		return msg;
+		return string;
 	}
 
-	private static String getFixedAlgorithm(final CipherAlgorithm algorithm, final CipherAlgorithmMode mode, final CipherAlgorithmPadding padding, final int keySizeBytes, final int unitBytes)
+	private static String getAlgorithmString(final CipherAlgorithm algorithm, final CipherAlgorithmMode mode, final CipherAlgorithmPadding padding, final int keySizeBytes, final int unitBytes)
 	{
 		final StringBuilder algorithmBuilder = new StringBuilder(algorithm.getId());
 
@@ -2855,9 +2251,7 @@ public final class SymmetricKeyCipher extends JPanel
 		}
 
 		if (bufferedCipher == null)
-		{
 			bufferedCipher = padding == null ? new BufferedBlockCipher(cipher) : new PaddedBufferedBlockCipher(cipher, padding);
-		}
 
 		return bufferedCipher;
 	}

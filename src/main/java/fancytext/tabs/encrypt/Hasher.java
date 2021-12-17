@@ -1039,16 +1039,31 @@ public final class Hasher extends JPanel
 
 		try
 		{
-			byte[] hash = null;
-			long checksum = -1;
+			final boolean isHex = hashStringRadix == 16;
+
 			if (hashAlgorithm.getProviderName() != null)
 			{
-				// Provider available
+				// Message digest algorithms supported by security provider
 				final MessageDigest md = MessageDigest.getInstance(algorithmString, hashAlgorithm.getProviderName());
 				md.update(messageBytes);
-				hash = md.digest();
+				final byte[] hash = md.digest();
+
+				if (isHex && hashStringTokenizeCB.isSelected())
+				{
+					final StringJoiner tokenizer = new StringJoiner(hashStringTokenizeDelimiterField.getText());
+
+					for (final byte b : hash)
+						tokenizer.add(String.format("%02x", b));
+
+					hashString = tokenizer.toString();
+				}
+				else
+					hashString = new BigInteger(1, hash).toString(hashStringRadix);
 			}
 			else
+			{
+				// Check-sum algorithms supported by natively
+				final long checksum;
 				switch (hashAlgorithm)
 				{
 					case CRC_16:
@@ -1073,23 +1088,12 @@ public final class Hasher extends JPanel
 						checksum = adler32.getValue();
 						break;
 					}
+					default:
+						throw new NoSuchAlgorithmException("Algorithm is not implemented");
 				}
 
-			final boolean isHex = hashStringRadix == 16;
-			if (hash != null)
-				if (isHex && hashStringTokenizeCB.isSelected())
-				{
-					final StringJoiner tokenizer = new StringJoiner(hashStringTokenizeDelimiterField.getText());
-
-					for (final byte b : hash)
-						tokenizer.add(String.format("%02x", b));
-
-					hashString = tokenizer.toString();
-				}
-				else
-					hashString = new BigInteger(1, hash).toString(hashStringRadix);
-			else
 				hashString = new BigInteger(String.valueOf(checksum)).toString(hashStringRadix);
+			}
 
 			if (isHex)
 			{
@@ -1105,7 +1109,6 @@ public final class Hasher extends JPanel
 		catch (final NoSuchAlgorithmException | RuntimeException | NoSuchProviderException e)
 		{
 			// If the specified hash algorithm is not supported
-
 			hashString = String.format("Error: %s", e);
 
 			final StringBuilder messageBuilder = new StringBuilder("Failed to hash the given message.").append(Main.lineSeparator).append(Main.lineSeparator);
@@ -1132,7 +1135,8 @@ public final class Hasher extends JPanel
 			Main.exceptionMessageBox(e.getClass().getCanonicalName(), messageBuilder.toString(), e);
 		}
 
-		hashTextField.setText(hashString);
+		final String finalHashString = hashString;
+		EventQueue.invokeLater(() -> hashTextField.setText(finalHashString));
 		return true;
 	}
 

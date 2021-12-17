@@ -142,7 +142,6 @@ public final class ClipboardAnalyzer extends JPanel
 				final DataFlavor flavor = dataFlavors[i];
 
 				final String mimeTypeString = flavor.getMimeType();
-
 				final String primaryType = flavor.getPrimaryType();
 				final String subtype = flavor.getSubType();
 
@@ -167,11 +166,11 @@ public final class ClipboardAnalyzer extends JPanel
 					for (final Entry<String, String> entry : parameters.entrySet())
 					{
 						final String key = entry.getKey();
-						final String fixedKey = Character.toUpperCase(key.charAt(0)) + key.substring(1); // First word capitalized
-						if (!tableValues.containsKey(fixedKey))
-							tableValues.put(fixedKey, new HashMap<>());
+						final String firstWordCapitalized = Character.toUpperCase(key.charAt(0)) + key.substring(1); // First word capitalized
+						if (!tableValues.containsKey(firstWordCapitalized))
+							tableValues.put(firstWordCapitalized, new HashMap<>());
 
-						tableValues.get(fixedKey).put(i, entry.getValue());
+						tableValues.get(firstWordCapitalized).put(i, entry.getValue());
 					}
 				}
 				catch (final NoSuchFieldException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e)
@@ -298,34 +297,35 @@ public final class ClipboardAnalyzer extends JPanel
 		// </editor-fold>
 
 		// <editor-fold desc="If the data is an array">
-		if (data.getClass().isArray())
+		final Class<?> dataClass = data.getClass();
+		if (dataClass.isArray())
 		{
 			final StringJoiner joiner = new StringJoiner(" ");
 
-			if (byte[].class.equals(data.getClass()))
+			if (dataClass == byte[].class)
 			{
 				final byte[] bArr = (byte[]) data;
 				for (final byte b : bArr)
 					joiner.add(String.format("%02X", b));
 			}
-			else if (char[].class.equals(data.getClass()))
+			else if (dataClass == char[].class)
 			{
 				final char[] cArr = (char[]) data;
 				return new String(cArr);
 			}
-			else if (short[].class.equals(data.getClass()))
+			else if (dataClass == short[].class)
 			{
 				final short[] sArr = (short[]) data;
 				for (final short s : sArr)
 					joiner.add(String.format("%d", s));
 			}
-			else if (int[].class.equals(data.getClass()))
+			else if (dataClass == int[].class)
 			{
 				final int[] iArr = (int[]) data;
 				for (final int i : iArr)
 					joiner.add(String.format("%d", i));
 			}
-			else if (long[].class.equals(data.getClass()))
+			else if (dataClass == long[].class)
 			{
 				final long[] lArr = (long[]) data;
 				for (final long l : lArr)
@@ -340,14 +340,14 @@ public final class ClipboardAnalyzer extends JPanel
 		Method toStringMethod = null;
 		try
 		{
-			toStringMethod = data.getClass().getMethod("toString");
+			toStringMethod = dataClass.getMethod("toString");
 		}
 		catch (final NoSuchMethodException ignored)
 		{
 
 		}
 
-		return toStringMethod != null && Object.class.equals(toStringMethod.getDeclaringClass()) ? data.getClass().getCanonicalName() + " does not implements \"toString()\" method." : data.toString();
+		return toStringMethod != null && toStringMethod.getDeclaringClass() == Object.class ? dataClass.getCanonicalName() + " does not implements \"toString()\" method." : data.toString();
 		// </editor-fold>
 
 	}
