@@ -1,7 +1,7 @@
 package fancytext.utils;
 
 /**
- * Just copy-pasted from 'sun.misc.CRC16'.
+ * Copy of {@code sun.misc.CRC16}.
  */
 public final class CRC16
 {

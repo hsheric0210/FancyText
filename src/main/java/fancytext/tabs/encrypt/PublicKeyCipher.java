@@ -1,4 +1,4 @@
-package fancytext.tabs;
+package fancytext.tabs.encrypt;
 
 import java.awt.*;
 import java.io.File;
@@ -25,7 +25,7 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 
 import fancytext.Main;
-import fancytext.tabs.Hasher.HashAlgorithm;
+import fancytext.tabs.encrypt.Hasher.HashAlgorithm;
 import fancytext.utils.CharsetWrapper;
 import fancytext.utils.PlainDocumentWithLimit;
 import fancytext.utils.MultiThreading;
@@ -2269,8 +2269,8 @@ public final class PublicKeyCipher extends JPanel
 				{
 					final int stateSize = (int) Optional.ofNullable(stateSizeCB.getSelectedItem()).orElse(256);
 					final int digestSize = (int) Optional.ofNullable(digestSizeCB.getSelectedItem()).orElse(256);
-					final String fixedDigestAlg = Hasher.getFixedAlgorithm(oaepPaddingDigest, stateSize, digestSize); // TODO: create stateSizeBits Combo box for SKEIN
-					oaepSpec = new OAEPParameterSpec(fixedDigestAlg, "MGF1", new MGF1ParameterSpec(fixedDigestAlg), PSpecified.DEFAULT);
+					final String algorithmString = Hasher.getAlgorithmString(oaepPaddingDigest, stateSize, digestSize); // TODO: create stateSizeBits Combo box for SKEIN
+					oaepSpec = new OAEPParameterSpec(algorithmString, "MGF1", new MGF1ParameterSpec(algorithmString), PSpecified.DEFAULT);
 				}
 
 				// Build the cipher algorithm string
@@ -2403,8 +2403,8 @@ public final class PublicKeyCipher extends JPanel
 			{
 				final int stateSize = (int) Optional.ofNullable(stateSizeCB.getSelectedItem()).orElse(256);
 				final int digestSize = (int) Optional.ofNullable(digestSizeCB.getSelectedItem()).orElse(256);
-				final String fixedDigestAlg = Hasher.getFixedAlgorithm(oaepPaddingDigest, stateSize, digestSize);
-				oaepSpec = new OAEPParameterSpec(fixedDigestAlg, "MGF1", new MGF1ParameterSpec(fixedDigestAlg), PSpecified.DEFAULT);
+				final String algorithmString = Hasher.getAlgorithmString(oaepPaddingDigest, stateSize, digestSize);
+				oaepSpec = new OAEPParameterSpec(algorithmString, "MGF1", new MGF1ParameterSpec(algorithmString), PSpecified.DEFAULT);
 			}
 
 			// Build the cipher algorithm string

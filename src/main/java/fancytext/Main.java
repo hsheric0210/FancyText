@@ -20,10 +20,14 @@ import java.util.regex.Pattern;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
+import fancytext.tabs.encode.Base64Coder;
+import fancytext.tabs.encrypt.Hasher;
+import fancytext.tabs.encrypt.PublicKeyCipher;
+import fancytext.tabs.encrypt.SymmetricKeyCipher;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import fancytext.tabs.*;
-import fancytext.tabs.languageconverter.LanguageConverter;
+import fancytext.tabs.fancify.TextFancifyTab;
 import fancytext.utils.MultiThreading;
 
 public final class Main extends JFrame
@@ -152,7 +156,7 @@ public final class Main extends JFrame
 
 		tasks.add(() ->
 		{
-			final JScrollPane scroll = new JScrollPane(new LanguageConverter());
+			final JScrollPane scroll = new JScrollPane(new TextFancifyTab());
 			scroll.getHorizontalScrollBar().setUnitIncrement(scrollSize);
 			scroll.getVerticalScrollBar().setUnitIncrement(scrollSize);
 			EventQueue.invokeLater(() -> tabs.addTab("Translater", scroll));

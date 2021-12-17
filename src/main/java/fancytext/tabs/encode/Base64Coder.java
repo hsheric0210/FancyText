@@ -1,4 +1,4 @@
-package fancytext.tabs;
+package fancytext.tabs.encode;
 
 import java.awt.*;
 import java.io.File;
@@ -61,8 +61,6 @@ public final class Base64Coder extends JPanel
 	{
 		// Main border setup
 		setBorder(new TitledBorder(null, "Base64 Converter", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
-
-		setSize(1000, 1000); // TODO: For Debug. Remove it later
 
 		// Main layout setup
 		final GridBagLayout gridBagLayout = new GridBagLayout();

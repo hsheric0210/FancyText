@@ -1,12 +1,9 @@
-package fancytext.tabs.languageconverter;
+package fancytext.tabs.fancify;
 
 import java.util.*;
-import java.util.AbstractMap.SimpleEntry;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutionException;
 
-import fancytext.Main;
 import fancytext.utils.MultiThreading;
 
 enum ConversionTablePresets

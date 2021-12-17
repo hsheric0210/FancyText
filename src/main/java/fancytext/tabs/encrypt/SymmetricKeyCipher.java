@@ -1,4 +1,4 @@
-package fancytext.tabs;
+package fancytext.tabs.encrypt;
 
 import java.awt.*;
 import java.io.File;

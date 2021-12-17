@@ -1,15 +1,11 @@
-package fancytext.tabs.languageconverter;
+package fancytext.tabs.fancify;
 
 import java.awt.*;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
-import java.lang.management.RuntimeMXBean;
 import java.util.*;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
 import java.util.Map.Entry;
 
-import javax.management.MXBean;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
@@ -18,7 +14,7 @@ import javax.swing.border.TitledBorder;
 import fancytext.Main;
 import fancytext.utils.MultiThreading;
 
-public final class LanguageConverter extends JPanel
+public final class TextFancifyTab extends JPanel
 {
 	private static final long serialVersionUID = 56531445307439992L;
 	private final JTextField keyField;
@@ -34,12 +30,12 @@ public final class LanguageConverter extends JPanel
 	private final JCheckBox caseSensitiveCB;
 	private final JSpinner convertRateSpinner;
 
-	public LanguageConverter()
+	public TextFancifyTab()
 	{
 		initDefaultConversionMap(ConversionTablePresets.LEET);
 
 		// Main border setup
-		setBorder(new TitledBorder(null, "Language Converter", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		setBorder(new TitledBorder(null, "Fancify Text", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 
 		// Main layout setup
 		final GridBagLayout theLayout = new GridBagLayout();
@@ -481,8 +477,9 @@ public final class LanguageConverter extends JPanel
 			@Override
 			public int getSize()
 			{
-				final int selectedIndex;
-				return (selectedIndex = convertFrom.getSelectedIndex()) < 0 || selectedIndex > conversionMap.size() ? 0 : conversionMap.get(convertFrom.getSelectedIndex()).getValue().size();
+				final int selectedIndex = convertFrom.getSelectedIndex();
+
+				return selectedIndex < 0 || selectedIndex > conversionMap.size() ? 0 : conversionMap.get(convertFrom.getSelectedIndex()).getValue().size();
 			}
 
 			@Override
@@ -499,15 +496,22 @@ public final class LanguageConverter extends JPanel
 
 		convertTo.addListSelectionListener(e ->
 		{
-			valueField.setText(convertFrom.getSelectedIndex() != -1 && convertTo.getSelectedIndex() != -1 ? conversionMap.get(convertFrom.getSelectedIndex()).getValue().get(convertTo.getSelectedIndex()) : "");
+			final int fromIndex = convertFrom.getSelectedIndex();
+			final int toIndex = convertTo.getSelectedIndex();
+
+			valueField.setText(fromIndex != -1 && toIndex != -1 ? conversionMap.get(fromIndex).getValue().get(toIndex) : "");
 
 			valueField.updateUI();
 		});
 
 		addConversionValueButton.addActionListener(e ->
 		{
-			if (!valueField.getText().isEmpty() && !conversionMap.get(convertFrom.getSelectedIndex()).getValue().contains(valueField.getText()))
-				conversionMap.get(convertFrom.getSelectedIndex()).getValue().add(valueField.getText());
+			final int selectedIndex = convertFrom.getSelectedIndex();
+			final String newCandidate = valueField.getText();
+
+			if (!newCandidate.isEmpty() && !conversionMap.get(selectedIndex).getValue().contains(newCandidate))
+				conversionMap.get(selectedIndex).getValue().add(newCandidate);
+
 			convertTo.updateUI();
 		});
 
@@ -567,14 +571,11 @@ public final class LanguageConverter extends JPanel
 
 		conversionMap.forEach(entry ->
 		{
-			final Optional<Entry<String, List<String>>> duplicateEntry = fixedConversionMap.stream().filter(_entry -> caseSensitive ? _entry.getKey().equals(entry.getKey()) : _entry.getKey().equalsIgnoreCase(entry.getKey())).findFirst();
-			// Merge the cases
+			final Optional<Entry<String, List<String>>> duplicateEntry = fixedConversionMap.stream().filter(otherEntry -> caseSensitive ? otherEntry.getKey().equals(entry.getKey()) : otherEntry.getKey().equalsIgnoreCase(entry.getKey())).findFirst();
+
+			// Merge duplicate cases
 			if (duplicateEntry.isPresent()) // If the key that have same name already exists, add all values onto it.
-			{
-				for (final String valueToAdd : entry.getValue())
-					if (!duplicateEntry.get().getValue().contains(valueToAdd)) // Value duplication check
-						duplicateEntry.get().getValue().add(valueToAdd);
-			}
+				entry.getValue().stream().filter(valueToAdd -> !duplicateEntry.get().getValue().contains(valueToAdd)).forEach(valueToAdd -> duplicateEntry.get().getValue().add(valueToAdd));
 			else
 				fixedConversionMap.add(new SimpleImmutableEntry<>(entry.getKey(), new ArrayList<>(entry.getValue()))); // Re-allocate is required because if we don't re-allocate it, it also TAMPER original conversion table.
 		});
@@ -582,40 +583,53 @@ public final class LanguageConverter extends JPanel
 		// https://banana-media-lab.tistory.com/entry/JAVA-ArrayList-내-단어-길이-내림차순-정렬 [Banana Media Lab]
 		fixedConversionMap.sort((entry1, entry2) -> Integer.compare(entry2.getKey().length(), entry1.getKey().length()));
 
+		final int inputLength = input.length();
 		final char[] charArray = input.toCharArray();
 		final StringBuilder outputBuilder = new StringBuilder(charArray.length);
-		for (int i = 0, j = charArray.length; i < j; i++)
+
+		for (int currentIndex = 0, maxIndex = charArray.length; currentIndex < maxIndex; currentIndex++)
 		{
-			final char currentChar = charArray[i];
-			boolean somethingChanged = false;
+			final char currentChar = charArray[currentIndex];
+			boolean changed = false;
+
 			if (random.nextFloat() <= convertRate)
 				for (final Entry<String, List<String>> entry : fixedConversionMap)
 				{
 					final String replaceFrom = entry.getKey();
-					if (replaceFrom.length() > 1) // TODO: Multi-character replacement algorithm is absolutely fucked-up. Someone pls fix it later.
-					{
-						if (input.length() - i >= replaceFrom.length()) // Input string length check
-						{
-							final String checkBuffer = input.substring(i, i + replaceFrom.length());
-							final boolean similar = caseSensitive ? checkBuffer.equals(replaceFrom) : checkBuffer.equalsIgnoreCase(replaceFrom);
+					final int replaceFromLength = replaceFrom.length();
 
-							if (similar)
+					final List<String> replaceToCandidates = entry.getValue();
+
+					if (replaceFromLength > 1)
+					{
+						if (inputLength - currentIndex >= replaceFromLength) // Input string length check
+						{
+							final String checkBuffer = input.substring(currentIndex, currentIndex + replaceFromLength);
+
+							if (caseSensitive ? checkBuffer.equals(replaceFrom) : checkBuffer.equalsIgnoreCase(replaceFrom))
 							{
-								final String replaceTo = entry.getValue().get(random.nextInt(entry.getValue().size()));
+								final String replaceTo = replaceToCandidates.get(random.nextInt(replaceToCandidates.size()));
+
 								outputBuilder.append(replaceTo);
-								i += replaceFrom.length() - 1; // Skip already-read texts
-								somethingChanged = true;
+
+								currentIndex += replaceFromLength - 1; // Skip already-read texts
+								changed = true;
 							}
 						}
 					}
-					else if (!somethingChanged && (replaceFrom.charAt(0) == currentChar || !caseSensitive && (Character.toLowerCase(replaceFrom.charAt(0)) == Character.toLowerCase(currentChar) || Character.toUpperCase(replaceFrom.charAt(0)) == Character.toUpperCase(currentChar))))
+					else
 					{
-						outputBuilder.append(entry.getValue().get(random.nextInt(entry.getValue().size())));
-						somethingChanged = true;
+						final char replaceFromChar = replaceFrom.charAt(0);
+
+						if (!changed && (replaceFromChar == currentChar || !caseSensitive && (Character.toLowerCase(replaceFromChar) == Character.toLowerCase(currentChar) || Character.toUpperCase(replaceFromChar) == Character.toUpperCase(currentChar))))
+						{
+							outputBuilder.append(replaceToCandidates.get(random.nextInt(replaceToCandidates.size())));
+							changed = true;
+						}
 					}
 				}
 
-			if (!somethingChanged)
+			if (!changed)
 				outputBuilder.append(currentChar);
 		}
 

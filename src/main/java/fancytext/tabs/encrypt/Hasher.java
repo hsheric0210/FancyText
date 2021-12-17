@@ -1,4 +1,4 @@
-package fancytext.tabs;
+package fancytext.tabs.encrypt;
 
 import java.awt.*;
 import java.io.File;
@@ -45,34 +45,34 @@ public final class Hasher extends JPanel
 
 	public enum HashAlgorithm
 	{
-		//<editor-fold desc="CRC-16">
+		// <editor-fold desc="CRC-16">
 		CRC_16("", "CRC-16", null, null),
-		//</editor-fold>
+		// </editor-fold>
 
-		//<editor-fold desc="CRC-32">
+		// <editor-fold desc="CRC-32">
 		CRC_32("", "CRC-32", null, null),
-		//</editor-fold>
+		// </editor-fold>
 
-		//<editor-fold desc="Adler-32">
+		// <editor-fold desc="Adler-32">
 		ADLER_32("", "Adler-32", null, null),
-		//</editor-fold>
+		// </editor-fold>
 
-		//<editor-fold desc="Message digest algorithm">
+		// <editor-fold desc="Message digest algorithm">
 		MD2("MD2", "MD-2", "SUN", null),
 
 		MD4("MD4", "MD-4", "BC", null),
 
 		MD5("MD5", "MD-5", "SUN", null),
-		//</editor-fold>
+		// </editor-fold>
 
-		//<editor-fold desc="SHA 1, 2">
+		// <editor-fold desc="SHA 1, 2">
 		SHA1("SHA-1", "SHA-1", "SUN", null),
 
 		SHA2("SHA", "SHA-2", "SUN", new int[]
 		{
 				224, 256, 384, 512
 		}),
-		//</editor-fold>
+		// </editor-fold>
 
 		// <editor-fold desc="SHA-3 family">
 		SHA3("SHA3", "SHA-3", "BC", new int[]
@@ -989,15 +989,13 @@ public final class Hasher extends JPanel
 			{
 				// If input file doesn't exists
 
-				final StringBuilder messageBuilder = new StringBuilder("Failed to hash the given message.").append(Main.lineSeparator).append(Main.lineSeparator);
+				final String messageBuilder = "Failed to hash the given message." + Main.lineSeparator + Main.lineSeparator +
 
-				// Print the cause of the problem
-				messageBuilder.append("Input file doesn't exists.").append(Main.lineSeparator).append(Main.lineSeparator);
+						"Input file doesn't exists." + Main.lineSeparator + Main.lineSeparator + // Print the cause of the problem
 
-				// Message to be hashed
-				messageBuilder.append("Input file path: ").append(inputFilePath).append(Main.lineSeparator);
+						"Input file path: " + inputFilePath + Main.lineSeparator; // Message to be hashed
 
-				Main.exceptionMessageBox("Input file doesn't exists", messageBuilder.toString(), new NoSuchFileException(inputFilePath));
+				Main.exceptionMessageBox("Input file doesn't exists", messageBuilder, new NoSuchFileException(inputFilePath));
 
 				return null;
 			}
@@ -1010,15 +1008,13 @@ public final class Hasher extends JPanel
 			{
 				// If IOException occurs while reading all bytes from the input file
 
-				final StringBuilder messageBuilder = new StringBuilder("Failed to hash the given message.").append(Main.lineSeparator).append(Main.lineSeparator);
+				final String messageBuilder = "Failed to hash the given message." + Main.lineSeparator + Main.lineSeparator +
 
-				// Print the cause of the problem
-				messageBuilder.append("IOException occurred while reading all bytes from the input file").append(Main.lineSeparator).append(Main.lineSeparator);
+						"IOException occurred while reading all bytes from the input file" + Main.lineSeparator + Main.lineSeparator + // Print the cause of the problem
 
-				// Message to be hashed
-				messageBuilder.append("Input file path: ").append(inputFilePath).append(Main.lineSeparator);
+						"Input file path: " + inputFilePath + Main.lineSeparator; // Message to be hashed
 
-				Main.exceptionMessageBox(e.getClass().getCanonicalName(), messageBuilder.toString(), e);
+				Main.exceptionMessageBox(e.getClass().getCanonicalName(), messageBuilder, e);
 			}
 
 			return null;
@@ -1039,7 +1035,7 @@ public final class Hasher extends JPanel
 		final int digestSizeBits = (int) Optional.ofNullable(hashDigestSizeBitsCB.getSelectedItem()).orElse(256);
 		final int hashStringRadix = (int) Optional.ofNullable(hashStringRadixCB.getSelectedItem()).orElse(16);
 
-		final String fixedAlgorithm = getFixedAlgorithm(hashAlgorithm, stateSizeBits, digestSizeBits);
+		final String algorithmString = getAlgorithmString(hashAlgorithm, stateSizeBits, digestSizeBits);
 
 		try
 		{
@@ -1048,7 +1044,7 @@ public final class Hasher extends JPanel
 			if (hashAlgorithm.getProviderName() != null)
 			{
 				// Provider available
-				final MessageDigest md = MessageDigest.getInstance(fixedAlgorithm, hashAlgorithm.getProviderName());
+				final MessageDigest md = MessageDigest.getInstance(algorithmString, hashAlgorithm.getProviderName());
 				md.update(messageBytes);
 				hash = md.digest();
 			}
@@ -1097,10 +1093,10 @@ public final class Hasher extends JPanel
 
 			if (isHex)
 			{
-				if (hashStringUppercaseCB.isSelected())
-					hashString = hashString.toUpperCase(Locale.ENGLISH);
-				else if (hashStringLowercaseCB.isSelected())
+				if (hashStringLowercaseCB.isSelected())
 					hashString = hashString.toLowerCase(Locale.ENGLISH);
+				else
+					hashString = hashString.toUpperCase(Locale.ENGLISH);
 
 				if (hashStringHexPrefixCB.isSelected())
 					hashString = "0x" + hashString;
@@ -1128,7 +1124,7 @@ public final class Hasher extends JPanel
 			messageBuilder.append("Hash algorithm provider: ").append(hashAlgorithm.getProviderName()).append("(").append(providerInfo).append(")").append(Main.lineSeparator);
 
 			// Hash algorithm
-			messageBuilder.append("Hash algorithm: ").append(fixedAlgorithm).append("(").append(hashAlgorithm).append(")").append(Main.lineSeparator);
+			messageBuilder.append("Hash algorithm: ").append(algorithmString).append("(").append(hashAlgorithm).append(")").append(Main.lineSeparator);
 
 			// Message to be hashed
 			messageBuilder.append("Message to be hashed: ").append(Main.filterStringForPopup(new String(messageBytes, StandardCharsets.UTF_8))).append(" (byteArrayLength: ").append(messageBytesSize).append(")").append(Main.lineSeparator);
@@ -1140,7 +1136,7 @@ public final class Hasher extends JPanel
 		return true;
 	}
 
-	static String getFixedAlgorithm(final HashAlgorithm algorithm, final int stateSizeBits, final int digestSizeBits)
+	static String getAlgorithmString(final HashAlgorithm algorithm, final int stateSizeBits, final int digestSizeBits)
 	{
 		final StringBuilder algorithmBuilder = new StringBuilder(algorithm.getId());
 
