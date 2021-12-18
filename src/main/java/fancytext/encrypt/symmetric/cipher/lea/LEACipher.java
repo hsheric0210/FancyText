@@ -1,16 +1,13 @@
-package fancytext.encrypt.symmetric.cipher;
+package fancytext.encrypt.symmetric.cipher.lea;
 
-import java.util.Objects;
-
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 
-import org.bouncycastle.crypto.DataLengthException;
-
 import fancytext.encrypt.symmetric.CipherAlgorithm;
-import fancytext.encrypt.symmetric.CipherAlgorithmMode;
-import fancytext.encrypt.symmetric.CipherAlgorithmPadding;
+import fancytext.encrypt.symmetric.CipherMode;
+import fancytext.encrypt.symmetric.CipherPadding;
 import fancytext.encrypt.symmetric.CipherExceptionType;
+import fancytext.encrypt.symmetric.cipher.AbstractCipher;
+import fancytext.encrypt.symmetric.CipherException;
 import kr.re.nsr.crypto.BlockCipher.Mode;
 import kr.re.nsr.crypto.BlockCipherMode;
 import kr.re.nsr.crypto.padding.PKCS5Padding;
@@ -22,17 +19,17 @@ public class LEACipher extends AbstractCipher
 	private byte[] key;
 	private byte[] iv;
 
-	public LEACipher(final CipherAlgorithm algorithm, final CipherAlgorithmMode mode, final CipherAlgorithmPadding padding) throws CipherException
+	public LEACipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding) throws CipherException
 	{
 		super(algorithm, mode, padding);
 
 		theCipher = getCipher();
 
-		if (padding == CipherAlgorithmPadding.PKCS5)
+		if (padding == CipherPadding.PKCS5)
 			theCipher.setPadding(new PKCS5Padding(getBlockSize()));
 	}
 
-	private BlockCipherMode getCipher()
+	private BlockCipherMode getCipher() throws CipherException
 	{
 		switch (mode)
 		{
@@ -47,9 +44,9 @@ public class LEACipher extends AbstractCipher
 				return new OFB();
 			case CTR:
 				return new CTR();
+			default:
+				throw new CipherException(CipherExceptionType.UNSUPPORTED_MODE, mode.name());
 		}
-
-		return null;
 	}
 
 	@Override
@@ -61,26 +58,25 @@ public class LEACipher extends AbstractCipher
 	@Override
 	public void setIV(final byte[] iv, final int macSize)
 	{
-		if (mode != CipherAlgorithmMode.ECB)
-			this.iv = iv;
+		this.iv = iv;
 	}
 
 	@Override
 	public void init(final int opMode) throws CipherException
 	{
-		Objects.requireNonNull(key, "Key is not set!");
+		requirePresent(key, "Key");
 
 		try
 		{
 			final Mode mode = opMode == Cipher.ENCRYPT_MODE ? Mode.ENCRYPT : Mode.DECRYPT;
-			if (this.mode == CipherAlgorithmMode.ECB)
-				theCipher.init(mode, key);
+			if (iv != null)
+				theCipher.init(mode, key, iv);
 			else
-				theCipher.init(mode, key, Objects.requireNonNull(iv, "IV is not set!"));
+				theCipher.init(mode, key);
 		}
-		catch (final IllegalArgumentException e)
+		catch (final Throwable e)
 		{
-			throw new CipherException(CipherExceptionType.INVALID_KEY, e);
+			throw new CipherException(CipherExceptionType.INITIALIZATION_UNSUCCESSFUL, e);
 		}
 	}
 
@@ -91,9 +87,9 @@ public class LEACipher extends AbstractCipher
 		{
 			return theCipher.doFinal(bytes);
 		}
-		catch (final DataLengthException | BadPaddingException e)
+		catch (final Throwable e)
 		{
-			throw new CipherException(CipherExceptionType.INVALID_CIPHERTEXT, e);
+			throw new CipherException(CipherExceptionType.PROCESS_UNSUCCESSFUL, e);
 		}
 	}
 

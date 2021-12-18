@@ -1,16 +1,13 @@
-package fancytext.encrypt.symmetric.cipher;
+package fancytext.encrypt.symmetric.cipher.lea;
 
-import java.util.Objects;
-
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 
-import org.bouncycastle.crypto.DataLengthException;
-
 import fancytext.encrypt.symmetric.CipherAlgorithm;
-import fancytext.encrypt.symmetric.CipherAlgorithmMode;
-import fancytext.encrypt.symmetric.CipherAlgorithmPadding;
 import fancytext.encrypt.symmetric.CipherExceptionType;
+import fancytext.encrypt.symmetric.CipherMode;
+import fancytext.encrypt.symmetric.CipherPadding;
+import fancytext.encrypt.symmetric.cipher.AbstractCipher;
+import fancytext.encrypt.symmetric.CipherException;
 import kr.re.nsr.crypto.BlockCipher.Mode;
 import kr.re.nsr.crypto.BlockCipherModeAE;
 import kr.re.nsr.crypto.symm.LEA.CCM;
@@ -23,14 +20,14 @@ public class LEAAECipher extends AbstractCipher
 	private byte[] nonce;
 	private int aeadTagLength;
 
-	public LEAAECipher(final CipherAlgorithm algorithm, final CipherAlgorithmMode mode, final CipherAlgorithmPadding padding) throws CipherException
+	public LEAAECipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding) throws CipherException
 	{
 		super(algorithm, mode, padding);
 
 		theCipher = getCipher();
 	}
 
-	private BlockCipherModeAE getCipher()
+	private BlockCipherModeAE getCipher() throws CipherException
 	{
 		switch (mode)
 		{
@@ -38,9 +35,23 @@ public class LEAAECipher extends AbstractCipher
 				return new CCM();
 			case GCM:
 				return new GCM();
+			default:
+				throw new CipherException(CipherExceptionType.UNSUPPORTED_MODE, mode.name());
 		}
+	}
 
-		return null;
+	@Override
+	public int getIVSize()
+	{
+		switch (mode)
+		{
+			case CCM:
+				return 13;
+			case GCM:
+				return 12;
+			default:
+				return -1;
+		}
 	}
 
 	@Override
@@ -53,19 +64,23 @@ public class LEAAECipher extends AbstractCipher
 	public void setIV(final byte[] nonce, final int aeadTagLength)
 	{
 		this.nonce = nonce;
+		this.aeadTagLength = aeadTagLength;
 	}
 
 	@Override
 	public void init(final int opMode) throws CipherException
 	{
+		requirePresent(key, "Key");
+		requirePresent(nonce, "Nonce");
+
 		try
 		{
 			final Mode mode = opMode == Cipher.ENCRYPT_MODE ? Mode.ENCRYPT : Mode.DECRYPT;
-			theCipher.init(mode, Objects.requireNonNull(key, "Key is not set!"), Objects.requireNonNull(nonce, "Nonce is not set!"), aeadTagLength);
+			theCipher.init(mode, key, nonce, aeadTagLength);
 		}
-		catch (final IllegalArgumentException e)
+		catch (final Throwable e)
 		{
-			throw new CipherException(CipherExceptionType.INVALID_KEY, e);
+			throw new CipherException(CipherExceptionType.INITIALIZATION_UNSUCCESSFUL, e);
 		}
 	}
 
@@ -76,9 +91,9 @@ public class LEAAECipher extends AbstractCipher
 		{
 			return theCipher.doFinal(bytes);
 		}
-		catch (final DataLengthException | BadPaddingException e)
+		catch (final Throwable e)
 		{
-			throw new CipherException(CipherExceptionType.INVALID_CIPHERTEXT, e);
+			throw new CipherException(CipherExceptionType.PROCESS_UNSUCCESSFUL, e);
 		}
 	}
 

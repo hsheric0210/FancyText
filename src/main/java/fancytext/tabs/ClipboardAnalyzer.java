@@ -103,6 +103,7 @@ public final class ClipboardAnalyzer extends JPanel
 		final GridBagConstraints gbc_analyzeButton = new GridBagConstraints();
 		gbc_analyzeButton.gridx = 0;
 		gbc_analyzeButton.gridy = 1;
+		analyzeButton.setToolTipText("Analyze the current clip-board data and display supported data-flavor(s) and corresponding data");
 		add(analyzeButton, gbc_analyzeButton);
 		// </editor-fold>
 
@@ -137,6 +138,9 @@ public final class ClipboardAnalyzer extends JPanel
 			// </editor-fold>
 
 			// <editor-fold desc="Do the work">
+
+			boolean dontAnalyzeParameters = false;
+
 			for (int i = 0; i < dataFlavorsSize; i++)
 			{
 				final DataFlavor flavor = dataFlavors[i];
@@ -149,34 +153,36 @@ public final class ClipboardAnalyzer extends JPanel
 				tableValues.get(DataFlavorTableModel.PRIMARY_TYPE).put(i, primaryType);
 				tableValues.get(DataFlavorTableModel.SUBTYPE).put(i, subtype);
 
-				try
-				{
-					final Field mimeTypeField = flavor.getClass().getDeclaredField("mimeType");
-					mimeTypeField.setAccessible(true);
-					final Object mimeType = mimeTypeField.get(flavor);
-
-					final Method MimeType_getParameters = mimeType.getClass().getDeclaredMethod("getParameters");
-					MimeType_getParameters.setAccessible(true);
-					final Object MimeTypeParameterList = MimeType_getParameters.invoke(mimeType);
-
-					final Field parametersField = MimeTypeParameterList.getClass().getDeclaredField("parameters");
-					parametersField.setAccessible(true);
-					final Map<String, String> parameters = (Map<String, String>) parametersField.get(MimeTypeParameterList);
-
-					for (final Entry<String, String> entry : parameters.entrySet())
+				if (!dontAnalyzeParameters)
+					try
 					{
-						final String key = entry.getKey();
-						final String firstWordCapitalized = Character.toUpperCase(key.charAt(0)) + key.substring(1); // First word capitalized
-						if (!tableValues.containsKey(firstWordCapitalized))
-							tableValues.put(firstWordCapitalized, new HashMap<>());
+						final Field mimeTypeField = flavor.getClass().getDeclaredField("mimeType");
+						mimeTypeField.setAccessible(true);
+						final Object mimeType = mimeTypeField.get(flavor);
 
-						tableValues.get(firstWordCapitalized).put(i, entry.getValue());
+						final Method MimeType_getParameters = mimeType.getClass().getDeclaredMethod("getParameters");
+						MimeType_getParameters.setAccessible(true);
+						final Object MimeTypeParameterList = MimeType_getParameters.invoke(mimeType);
+
+						final Field parametersField = MimeTypeParameterList.getClass().getDeclaredField("parameters");
+						parametersField.setAccessible(true);
+						final Map<String, String> parameters = (Map<String, String>) parametersField.get(MimeTypeParameterList);
+
+						for (final Entry<String, String> entry : parameters.entrySet())
+						{
+							final String key = entry.getKey();
+							final String firstWordCapitalized = Character.toUpperCase(key.charAt(0)) + key.substring(1); // First word capitalized
+							if (!tableValues.containsKey(firstWordCapitalized))
+								tableValues.put(firstWordCapitalized, new HashMap<>());
+
+							tableValues.get(firstWordCapitalized).put(i, entry.getValue());
+						}
 					}
-				}
-				catch (final NoSuchFieldException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e)
-				{
-					e.printStackTrace();
-				}
+					catch (final NoSuchFieldException | IllegalAccessException | NoSuchMethodException | InvocationTargetException | RuntimeException e)
+					{
+						dontAnalyzeParameters = true;
+						e.printStackTrace();
+					}
 
 				String stringValue;
 				try
@@ -355,9 +361,9 @@ public final class ClipboardAnalyzer extends JPanel
 	private static final class DataFlavorTableModel extends DefaultTableModel
 	{
 		private static final long serialVersionUID = 3061599991851125932L;
-		private static final String MIME_TYPE = "Media type";
-		private static final String PRIMARY_TYPE = "Primary-type";
-		private static final String SUBTYPE = "Sub-type";
+		private static final String MIME_TYPE = "MIME Type";
+		private static final String PRIMARY_TYPE = "Primary Type";
+		private static final String SUBTYPE = "Sub Type";
 		private static final String VALUE = "Value";
 		private static final String[] EMPTY_STRING_ARRAY = new String[0];
 

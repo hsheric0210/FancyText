@@ -1,7 +1,7 @@
 package fancytext.encrypt.symmetric;
 
 @SuppressWarnings("StaticMethodOnlyUsedInOneClass") // because of 'illegal forward reference' error
-public enum CipherAlgorithmPadding
+public enum CipherPadding
 {
 	NONE("NoPadding", "None"),
 	ZERO_FILL("ZeroBytePadding", "Zero-fill padding"),
@@ -14,13 +14,13 @@ public enum CipherAlgorithmPadding
 	private final String paddingName;
 	private final String displayName;
 
-	public static final CipherAlgorithmPadding[] SUNJCE_DEFAULT =
+	public static final CipherPadding[] SUNJCE_DEFAULT =
 	{
 			NONE, PKCS5, ISO10126
 	};
-	public static final CipherAlgorithmPadding[] BC_DEFAULT = values();
+	public static final CipherPadding[] BC_DEFAULT = values();
 
-	CipherAlgorithmPadding(final String paddingName, final String displayName)
+	CipherPadding(final String paddingName, final String displayName)
 	{
 		this.paddingName = paddingName;
 		this.displayName = displayName;

@@ -8,41 +8,24 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.StandardOpenOption;
-import java.security.*;
-import java.security.spec.AlgorithmParameterSpec;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
-import javax.crypto.*;
-import javax.crypto.spec.*;
+import javax.crypto.Cipher;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 
-import org.bouncycastle.crypto.*;
-import org.bouncycastle.crypto.engines.RijndaelEngine;
-import org.bouncycastle.crypto.modes.*;
-import org.bouncycastle.crypto.paddings.*;
-import org.bouncycastle.crypto.params.AEADParameters;
-import org.bouncycastle.crypto.params.KeyParameter;
-import org.bouncycastle.crypto.params.ParametersWithIV;
-import org.bouncycastle.jcajce.spec.AEADParameterSpec;
-import org.bouncycastle.jcajce.spec.GOST28147ParameterSpec;
-
 import fancytext.Main;
-import fancytext.encrypt.symmetric.CipherAlgorithm;
-import fancytext.encrypt.symmetric.CipherAlgorithmMode;
-import fancytext.encrypt.symmetric.CipherAlgorithmPadding;
-import fancytext.encrypt.symmetric.CipherExceptionType;
+import fancytext.encrypt.symmetric.*;
+import fancytext.encrypt.symmetric.cipher.AbstractCipher;
+import fancytext.encrypt.symmetric.cipher.lea.LEAAECipher;
+import fancytext.encrypt.symmetric.cipher.lea.LEACipher;
+import fancytext.encrypt.symmetric.cipher.rijndael.RijndaelAEADCipher;
+import fancytext.encrypt.symmetric.cipher.rijndael.RijndaelCipher;
+import fancytext.encrypt.symmetric.cipher.spiBased.*;
 import fancytext.utils.CharsetWrapper;
 import fancytext.utils.MultiThreading;
 import fancytext.utils.PlainDocumentWithLimit;
-import kr.re.nsr.crypto.BlockCipher.Mode;
-import kr.re.nsr.crypto.BlockCipherMode;
-import kr.re.nsr.crypto.BlockCipherModeAE;
-import kr.re.nsr.crypto.padding.PKCS5Padding;
-import kr.re.nsr.crypto.symm.LEA.*;
 
 public final class SymmetricKeyCipher extends JPanel
 {
@@ -53,8 +36,8 @@ public final class SymmetricKeyCipher extends JPanel
 	private final JTextField ivTextField;
 	private final JComboBox<CharsetWrapper> plainTextCharsetCB;
 	private final JComboBox<Integer> keySizeCB;
-	private final JComboBox<CipherAlgorithmMode> cipherAlgorithmModeCB;
-	private final JComboBox<CipherAlgorithmPadding> cipherAlgorithmPaddingCB;
+	private final JComboBox<CipherMode> cipherAlgorithmModeCB;
+	private final JComboBox<CipherPadding> cipherAlgorithmPaddingCB;
 	private final JComboBox<CharsetWrapper> keyTextCharsetCB;
 	private final JComboBox<CharsetWrapper> ivTextCharsetCB;
 	private final JCheckBox base64EncryptedText;
@@ -1037,17 +1020,17 @@ public final class SymmetricKeyCipher extends JPanel
 		cipherAlgorithmCB.setModel(new DefaultComboBoxModel<>(CipherAlgorithm.values()));
 		cipherAlgorithmCB.setSelectedItem(CipherAlgorithm.AES);
 
-		cipherAlgorithmModeCB.setModel(new DefaultComboBoxModel<>(CipherAlgorithmMode.sunJCEDefaults()));
-		cipherAlgorithmModeCB.setSelectedItem(CipherAlgorithmMode.CBC); // CBC mode is default mode
+		cipherAlgorithmModeCB.setModel(new DefaultComboBoxModel<>(CipherMode.SUNJCE_DEFAULT));
+		cipherAlgorithmModeCB.setSelectedItem(CipherMode.CBC); // CBC mode is default mode
 
-		cipherAlgorithmPaddingCB.setModel(new DefaultComboBoxModel<>(new CipherAlgorithmPadding[]
+		cipherAlgorithmPaddingCB.setModel(new DefaultComboBoxModel<>(new CipherPadding[]
 		{
-				CipherAlgorithmPadding.NONE, CipherAlgorithmPadding.PKCS5, CipherAlgorithmPadding.ISO10126
+				CipherPadding.NONE, CipherPadding.PKCS5, CipherPadding.ISO10126
 		}));
-		cipherAlgorithmPaddingCB.setSelectedItem(CipherAlgorithmPadding.PKCS5);
+		cipherAlgorithmPaddingCB.setSelectedItem(CipherPadding.PKCS5);
 
 		final Vector<Integer> unitBytes = new Vector<>();
-		final int blockSize = CipherAlgorithm.AES.getBlocksize();
+		final int blockSize = CipherAlgorithm.AES.getBlockSize();
 		for (int i = 8; i <= blockSize; i += 8)
 			unitBytes.add(i);
 		cipherAlgorithmModeCFBOFBUnitBytesCB.setModel(new DefaultComboBoxModel<>(unitBytes));
@@ -1107,9 +1090,9 @@ public final class SymmetricKeyCipher extends JPanel
 			cipherAlgorithmModeCB.setModel(new DefaultComboBoxModel<>(newAlgorithm.getSupportedModes()));
 			cipherAlgorithmModeCB.updateUI();
 
-			cipherAlgorithmModeCB.setSelectedItem(CipherAlgorithmMode.CBC);
+			cipherAlgorithmModeCB.setSelectedItem(CipherMode.CBC);
 
-			final CipherAlgorithmMode cipherMode = Optional.ofNullable((CipherAlgorithmMode) cipherAlgorithmModeCB.getSelectedItem()).orElse(CipherAlgorithmMode.ECB);
+			final CipherMode cipherMode = Optional.ofNullable((CipherMode) cipherAlgorithmModeCB.getSelectedItem()).orElse(CipherMode.ECB);
 
 			// Check the cipher mode is using IV while encryption/decryption
 			final boolean usingIV = cipherMode.isUsingIV() || newAlgorithm.isStreamCipher();
@@ -1119,7 +1102,7 @@ public final class SymmetricKeyCipher extends JPanel
 			cipherAlgorithmPaddingCB.setModel(new DefaultComboBoxModel<>(newAlgorithm.getSupportedPaddings()));
 			cipherAlgorithmPaddingCB.updateUI();
 
-			cipherAlgorithmPaddingCB.setSelectedItem(CipherAlgorithmPadding.PKCS5);
+			cipherAlgorithmPaddingCB.setSelectedItem(CipherPadding.PKCS5);
 
 			final boolean keySizesAvailable = newAlgorithm.getAvailableKeySizes() != null;
 
@@ -1143,7 +1126,7 @@ public final class SymmetricKeyCipher extends JPanel
 			keyTextField.updateUI();
 			keyTextField.setText(key);
 
-			final boolean isCFBorOFB = cipherMode == CipherAlgorithmMode.CFB || cipherMode == CipherAlgorithmMode.OFB;
+			final boolean isCFBorOFB = cipherMode == CipherMode.CFB || cipherMode == CipherMode.OFB;
 			cipherAlgorithmModeCFBOFBUnitBytesPanel.setEnabled(isCFBorOFB);
 			cipherAlgorithmModeCFBOFBUnitBytesCB.setEnabled(isCFBorOFB);
 
@@ -1152,10 +1135,10 @@ public final class SymmetricKeyCipher extends JPanel
 			cipherAlgorithmModeAEADTagLenCB.setEnabled(isAEAD);
 
 			// If the new algorithm is supporting CFB or OFB mode
-			if (Arrays.stream(newAlgorithm.getSupportedModes()).anyMatch(mode -> mode == CipherAlgorithmMode.CFB || mode == CipherAlgorithmMode.OFB))
+			if (Arrays.stream(newAlgorithm.getSupportedModes()).anyMatch(mode -> mode == CipherMode.CFB || mode == CipherMode.OFB))
 			{
 				final int lastSelectedUnitBytes = (int) Optional.ofNullable(cipherAlgorithmModeCFBOFBUnitBytesCB.getSelectedItem()).orElse(16);
-				final int newBlockSize = newAlgorithm.getBlocksize();
+				final int newBlockSize = newAlgorithm.getBlockSize();
 				if (!newAlgorithm.isStreamCipher() && newBlockSize != -1)
 				{
 					final Vector<Integer> newUnitBytes = new Vector<>((newBlockSize - 8) / 8);
@@ -1168,7 +1151,7 @@ public final class SymmetricKeyCipher extends JPanel
 			}
 
 			// If the new algorithm is supporting AEAD modes
-			if (Arrays.stream(newAlgorithm.getSupportedModes()).anyMatch(CipherAlgorithmMode::isAEADMode))
+			if (Arrays.stream(newAlgorithm.getSupportedModes()).anyMatch(CipherMode::isAEADMode))
 			{
 				final int lastSelectedTagLength = (int) Optional.ofNullable(cipherAlgorithmModeAEADTagLenCB.getSelectedItem()).orElse(128);
 				final int minTagLength = newAlgorithm.getMinAEADTagLength();
@@ -1210,7 +1193,7 @@ public final class SymmetricKeyCipher extends JPanel
 					if (doSaveEncryptedBytes(doEncrypt(getPlainBytes())))
 						Main.notificationMessageBox("Successfully encrypted!", "Successfully encrypted the plain message!", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null);
 				}
-				catch (final InterruptedException | ExecutionException | SymmetricKeyCryptionException ex)
+				catch (final Throwable ex)
 				{
 					Main.exceptionMessageBox("Exception while encryption", "An exception occurred while encryption.", ex);
 				}
@@ -1241,7 +1224,7 @@ public final class SymmetricKeyCipher extends JPanel
 					if (doSavePlainBytes(doDecrypt(getEncryptedBytes())))
 						Main.notificationMessageBox("Successfully decrypted!", "Successfully decrypted the plain message!", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null);
 				}
-				catch (final InterruptedException | ExecutionException | SymmetricKeyCryptionException ex)
+				catch (final InterruptedException | ExecutionException | CipherException ex)
 				{
 					Main.exceptionMessageBox("Exception while decryption", "An exception occurred while decryption.", ex);
 				}
@@ -1261,7 +1244,7 @@ public final class SymmetricKeyCipher extends JPanel
 		cipherAlgorithmModeCB.addActionListener(e ->
 		{
 			final CipherAlgorithm cipherAlgorithm = Optional.ofNullable((CipherAlgorithm) cipherAlgorithmCB.getSelectedItem()).orElse(CipherAlgorithm.AES);
-			final CipherAlgorithmMode cipherMode = Optional.ofNullable((CipherAlgorithmMode) cipherAlgorithmModeCB.getSelectedItem()).orElse(CipherAlgorithmMode.ECB);
+			final CipherMode cipherMode = Optional.ofNullable((CipherMode) cipherAlgorithmModeCB.getSelectedItem()).orElse(CipherMode.ECB);
 
 			// Check the cipher mode is using IV while encryption/decryption
 			final boolean usingIV = cipherMode.isUsingIV() || cipherAlgorithm.isStreamCipher();
@@ -1272,7 +1255,7 @@ public final class SymmetricKeyCipher extends JPanel
 			ivTextFieldPanel.updateUI();
 
 			// Check the cipher mode 'CFB' or 'OFB' selected
-			final boolean isCFBorOFB = cipherMode == CipherAlgorithmMode.CFB || cipherMode == CipherAlgorithmMode.OFB;
+			final boolean isCFBorOFB = cipherMode == CipherMode.CFB || cipherMode == CipherMode.OFB;
 
 			cipherAlgorithmModeCFBOFBUnitBytesPanel.setEnabled(isCFBorOFB);
 			cipherAlgorithmModeCFBOFBUnitBytesCB.setEnabled(isCFBorOFB);
@@ -1282,9 +1265,9 @@ public final class SymmetricKeyCipher extends JPanel
 			cipherAlgorithmModeAEADTagLenCB.setEnabled(isAEAD);
 
 			if (isAEAD)
-				cipherAlgorithmPaddingCB.setModel(new DefaultComboBoxModel<>(new CipherAlgorithmPadding[]
+				cipherAlgorithmPaddingCB.setModel(new DefaultComboBoxModel<>(new CipherPadding[]
 				{
-						CipherAlgorithmPadding.NONE
+						CipherPadding.NONE
 				}));
 		});
 
@@ -1517,10 +1500,11 @@ public final class SymmetricKeyCipher extends JPanel
 			}
 		}
 		else
-		{
-			encryptedTextField.setText(new String(encryptedBytes, StandardCharsets.ISO_8859_1));
-			encryptedTextField.updateUI();
-		}
+			EventQueue.invokeLater(() ->
+			{
+				encryptedTextField.setText(new String(encryptedBytes, StandardCharsets.ISO_8859_1));
+				encryptedTextField.updateUI();
+			});
 
 		return true;
 	}
@@ -1578,7 +1562,7 @@ public final class SymmetricKeyCipher extends JPanel
 		return encryptedTextField.getText().getBytes(StandardCharsets.ISO_8859_1);
 	}
 
-	private byte[] getKey(final CipherAlgorithm cipherAlgorithm, final char paddingChar)
+	private byte[] getKey(final CipherAlgorithm cipherAlgorithm, final byte paddingByte)
 	{
 		final Charset charset = Optional.ofNullable((CharsetWrapper) keyTextCharsetCB.getSelectedItem()).orElse(CharsetWrapper.UTF_8).getCharset();
 
@@ -1593,684 +1577,161 @@ public final class SymmetricKeyCipher extends JPanel
 		if (keyString == null || keyString.isEmpty())
 			return null;
 
-		final String paddedKeyString = clamp(charset, keyString, minKeyLength, maxKeyLength, paddingChar);
-		final byte[] keyBytes = paddedKeyString.getBytes(charset);
-		final int keyBytesSize = keyBytes.length;
+		final byte[] paddedKey = CipherHelper.pad(keyString.getBytes(charset), minKeyLength, maxKeyLength, paddingByte);
+		final int keyBytesSize = paddedKey.length;
 
+		final String paddedKeyString = new String(paddedKey, charset);
+		EventQueue.invokeLater(() -> keyTextField.setText(paddedKeyString));
 		Main.LOGGER.info(String.format("key[%d]: \"%s\" -> paddedKey[%d]: \"%s\" - %d bytes (%d bits)", keyString.length(), keyString, paddedKeyString.length(), paddedKeyString, keyBytesSize, keyBytesSize << 3));
 
-		return keyBytes;
+		return paddedKey;
 	}
 
-	private byte[] getInitialVector(final CipherAlgorithm cipherAlg, final CipherAlgorithmMode cipherMode, final char paddingChar, final int cipherBlockSize)
+	private byte[] getInitialVector(final AbstractCipher cipher, final byte paddingByte)
 	{
 		final Charset charset = Optional.ofNullable((CharsetWrapper) ivTextCharsetCB.getSelectedItem()).orElse(CharsetWrapper.UTF_8).getCharset();
 
-		int ivSize = cipherBlockSize;
-		if (cipherAlg == CipherAlgorithm.XSalsa20)
-			ivSize = 24; // XSalsa20 requires exactly 24 bytes of IV
-		else if (cipherMode == CipherAlgorithmMode.CCM)
-			ivSize = 13; // nonce must have length from 7 to 13 octets
-		else if (cipherAlg == CipherAlgorithm.LEA && cipherMode == CipherAlgorithmMode.GCM)
-			ivSize = 12;
-
-		if (ivSize == 0)
-			ivSize = cipherAlg.getBlocksize() / 8;
-
 		final String ivString = ivTextField.getText();
 
-		final String paddedIV = clamp(charset, ivString, ivSize, ivSize, paddingChar);
-		final byte[] ivBytes = paddedIV.getBytes(charset);
+		if (ivString == null || ivString.isEmpty())
+			return null;
+
+		final int ivSize = cipher.getIVSize();
+		final byte[] ivBytes = CipherHelper.pad(ivString.getBytes(charset), ivSize, ivSize, paddingByte);
 		final int ivBytesSize = ivBytes.length;
 
-		Main.LOGGER.info(String.format("iv[%d]: \"%s\" -> paddedIV[%d]: \"%s\" - %d bytes (%d bits)", ivString.length(), ivString, paddedIV.length(), paddedIV, ivBytesSize, ivBytesSize << 3));
+		final String paddedIVString = new String(ivBytes, charset);
+		EventQueue.invokeLater(() -> ivTextField.setText(paddedIVString));
+		Main.LOGGER.info(String.format("iv[%d]: \"%s\" -> paddedIV[%d]: \"%s\" - %d bytes (%d bits)", ivString.length(), ivString, paddedIVString.length(), paddedIVString, ivBytesSize, ivBytesSize << 3));
 
 		return ivBytes;
 	}
 
-	byte[] doEncrypt(byte[] plainBytes) throws SymmetricKeyCryptionException
+	private AbstractCipher createCipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding, final int unitBytes) throws CipherException
 	{
-		if (plainBytes == null || plainBytes.length == 0)
-			return null;
-
-		final Charset charset = Optional.ofNullable((CharsetWrapper) plainTextCharsetCB.getSelectedItem()).orElse(CharsetWrapper.UTF_8).getCharset();
-
-		// <editor-fold desc="Cipher settings">
-		final CipherAlgorithm cipherAlg = Optional.ofNullable((CipherAlgorithm) cipherAlgorithmCB.getSelectedItem()).orElse(CipherAlgorithm.AES);
-		final CipherAlgorithmMode cipherMode = Optional.ofNullable((CipherAlgorithmMode) cipherAlgorithmModeCB.getSelectedItem()).orElse(CipherAlgorithmMode.ECB);
-		final int cipherUnitBytes = (int) Optional.ofNullable(cipherAlgorithmModeCFBOFBUnitBytesCB.getSelectedItem()).orElse(16);
-		final CipherAlgorithmPadding cipherPadding = Optional.ofNullable((CipherAlgorithmPadding) cipherAlgorithmPaddingCB.getSelectedItem()).orElse(CipherAlgorithmPadding.PKCS5);
-		// </editor-fold>
-
-		// <editor-fold desc="Key sizes">
-		int keySizeBytes = -1;
-		if (cipherAlg.getAvailableKeySizes() != null)
-			keySizeBytes = (int) Optional.ofNullable(keySizeCB.getSelectedItem()).orElse(256) / 8;
-		// </editor-fold>
-
-		// Misc. options
-		final boolean usingIV = cipherMode.isUsingIV() || cipherAlg.isStreamCipher();
-		final boolean encodeEncrypted = base64EncryptedText.isSelected();
-		final String paddingCharFieldText = paddingCharField.getText();
-
-		// Check the resources
-		if (paddingCharFieldText == null || paddingCharFieldText.isEmpty())
-			return null;
-
-		final char paddingChar = paddingCharField.getText().charAt(0);
-
-		final String cipherAlgorithm = getAlgorithmString(cipherAlg, cipherMode, cipherPadding, keySizeBytes, cipherUnitBytes);
-
-		final boolean isLEA = cipherAlg == CipherAlgorithm.LEA;
-
-		final boolean isRijndael = cipherAlg == CipherAlgorithm.Rijndael;
-		final int rijndaelBlockSize = (int) Optional.ofNullable(rijndaelBlockSizeCB.getSelectedItem()).orElse(256);
-
-		try
+		switch (algorithm)
 		{
-
-			// <editor-fold desc="Create the cipher">
-			Cipher cipher = null;
-
-			BufferedBlockCipher rijndaelCipher = null;
-			AEADBlockCipher rijndaelAEADCipher = null;
-
-			BlockCipherMode leaCipher = null;
-			BlockCipherModeAE leaAEADCipher = null;
-
-			final int cipherBlockSize;
-			if (isLEA)
+			case AES:
+				return new AESCipher(algorithm, mode, padding, unitBytes, (int) Optional.ofNullable(keySizeCB.getSelectedItem()).orElse(256));
+			case GOST28147:
+				return new GOST28147Cipher(algorithm, mode, padding, unitBytes, Optional.ofNullable((String) gost28147SBoxCB.getSelectedItem()).orElse("Default").toUpperCase(Locale.ENGLISH));
+			case RC2:
+				return new RC2Cipher(algorithm, mode, padding, unitBytes);
+			case RC5_32:
+			case RC5_64:
+				return new RC5Cipher(algorithm, mode, padding, unitBytes, (int) rc5RoundsSpinner.getValue());
+			case Threefish:
+				return new ThreefishCipher(algorithm, mode, padding, unitBytes, (int) Optional.ofNullable(keySizeCB.getSelectedItem()).orElse(256) / 8);
+			case XSalsa20:
+				return new XSalsa20Cipher(algorithm, mode, padding, unitBytes);
+			case Rijndael:
 			{
-				if (cipherMode.isAEADMode())
-					leaAEADCipher = getLEAAEADCipher(cipherMode);
-				else
-					leaCipher = getLEACipher(cipherMode);
-				cipherBlockSize = 16;
+				final int blockSize = (int) Optional.ofNullable(rijndaelBlockSizeCB.getSelectedItem()).orElse(256);
+				if (mode.isAEADMode())
+					return new RijndaelAEADCipher(algorithm, mode, padding, blockSize);
+				return new RijndaelCipher(algorithm, mode, padding, unitBytes, blockSize);
 			}
-			else if (isRijndael)
+			case LEA:
 			{
-				if (cipherMode.isAEADMode())
-					rijndaelAEADCipher = createRijndaelAEADCipher(cipherMode, rijndaelBlockSize);
-				else
-					rijndaelCipher = createRijndaelCipher(cipherMode, cipherPadding, cipherUnitBytes, rijndaelBlockSize);
-				cipherBlockSize = rijndaelBlockSize / 8;
+				if (mode.isAEADMode())
+					return new LEAAECipher(algorithm, mode, padding);
+				return new LEACipher(algorithm, mode, padding);
 			}
-			else
-			{
-				cipher = Cipher.getInstance(cipherAlgorithm, cipherAlg.getProviderName());
-				cipherBlockSize = cipher.getBlockSize();
-			}
-			// </editor-fold>
-
-			dumpCipherAlgorithm(cipherAlg, cipherMode, cipherPadding);
-
-			// <editor-fold desc="Create SecretKeySpec">
-			final byte[] keyBytes = getKey(cipherAlg, paddingChar);
-			final Key keySpec = new SecretKeySpec(keyBytes, cipherAlg.getId());
-			// </editor-fold>
-
-			// <editor-fold desc="Plain-text clamp">
-			if (cipherPadding == CipherAlgorithmPadding.NONE && !cipherMode.isAEADMode() && cipherAlg.isPaddedInputRequired() && cipherBlockSize > 0 && plainBytes.length % cipherBlockSize != 0)
-			{
-				final String plainStr = new String(plainBytes, charset); // Convert the byte array to the string
-
-				final int plainStringLength = plainStr.length();
-				final int paddingCharSize = String.valueOf(paddingChar).getBytes(charset).length;
-				final int paddingLength = cipherBlockSize * ((plainStringLength - plainStringLength % cipherBlockSize) / cipherBlockSize + 1) - plainStringLength;
-
-				final String pad = IntStream.range(0, paddingLength).mapToObj(i -> String.valueOf(paddingChar)).collect(Collectors.joining("", plainStr, ""));
-
-				plainBytes = new byte[plainBytes.length + paddingCharSize * paddingLength]; // Expand
-
-				final byte[] paddedBytes = pad.getBytes(charset);
-				System.arraycopy(paddedBytes, 0, plainBytes, 0, paddedBytes.length);
-
-				// TODO: I know applying the clamp characters after converting the byte array to the string is the worst solution ever. Please someone fix it later. Or disable the auto-clamp for No_Padding option.
-			}
-			// </editor-fold>
-
-			// <editor-fold desc="IV initialization">
-			byte[] ivBytes = null;
-
-			if (usingIV)
-			{
-				ivBytes = getInitialVector(cipherAlg, cipherMode, paddingChar, cipherBlockSize);
-			}
-			// </editor-fold>
-
-			// <editor-fold desc="Cipher parameter spec initialization">
-			AlgorithmParameterSpec cipherParameterSpec = null;
-			final int aeadTagLength = (int) Optional.ofNullable(cipherAlgorithmModeAEADTagLenCB.getSelectedItem()).orElse(128);
-			if (!isLEA && !isRijndael)
-			{
-				final String gost28147SBoxName = Optional.ofNullable((String) gost28147SBoxCB.getSelectedItem()).orElse("Default").toUpperCase(Locale.ENGLISH);
-				final int rc5Rounds = (int) rc5RoundsSpinner.getValue();
-
-				switch (cipherAlg)
-				{
-					case GOST28147:
-						cipherParameterSpec = usingIV ? new GOST28147ParameterSpec(gost28147SBoxName, ivBytes) : new GOST28147ParameterSpec(gost28147SBoxName);
-						break;
-					case RC2:
-						cipherParameterSpec = usingIV ? new RC2ParameterSpec(0, ivBytes) : new RC2ParameterSpec(0);
-						break;
-					case RC5_32:
-						cipherParameterSpec = usingIV ? new RC5ParameterSpec(0, rc5Rounds, 32, ivBytes) : new RC5ParameterSpec(0, rc5Rounds, 32);
-						break;
-					case RC5_64:
-						cipherParameterSpec = usingIV ? new RC5ParameterSpec(0, rc5Rounds, 64, ivBytes) : new RC5ParameterSpec(0, rc5Rounds, 64);
-						break;
-					default:
-						if (usingIV)
-							if (cipherAlg == CipherAlgorithm.AES && cipherMode == CipherAlgorithmMode.GCM) // AES-Dedicated parameter spec
-								cipherParameterSpec = new GCMParameterSpec(aeadTagLength, ivBytes);
-							else
-								cipherParameterSpec = cipherMode.isAEADMode() ? new AEADParameterSpec(ivBytes, aeadTagLength, null) : new IvParameterSpec(ivBytes);
-				}
-			}
-			// </editor-fold>
-
-			// <editor-fold desc="Initialize the cipher and encrypt">
-			final byte[] encryptedBytes;
-			if (isLEA)
-				if (leaAEADCipher == null)
-				{
-					// Non-AEAD
-					if (cipherPadding == CipherAlgorithmPadding.PKCS5)
-						leaCipher.setPadding(new PKCS5Padding(16));
-
-					if (cipherMode == CipherAlgorithmMode.ECB)
-						leaCipher.init(Mode.ENCRYPT, keyBytes);
-					else
-						leaCipher.init(Mode.ENCRYPT, keyBytes, ivBytes);
-
-					encryptedBytes = leaCipher.doFinal(plainBytes);
-				}
-				else
-				{
-					// AEAD
-					leaAEADCipher.init(Mode.ENCRYPT, keyBytes, ivBytes, aeadTagLength);
-					encryptedBytes = leaAEADCipher.doFinal(plainBytes);
-				}
-			else if (isRijndael)
-			{
-				final CipherParameters params;
-				if (usingIV)
-					params = cipherMode.isAEADMode() ? new AEADParameters(new KeyParameter(keyBytes), aeadTagLength, ivBytes) : new ParametersWithIV(new KeyParameter(keyBytes), ivBytes);
-				else
-					params = new KeyParameter(keyBytes);
-
-				/* https://stackoverflow.com/questions/50441959/how-can-i-do-for-rijndael-256-with-bouncycastle-api */
-
-				if (rijndaelAEADCipher == null)
-				{
-					rijndaelCipher.init(true, params);
-
-					final byte[] tmpEncryptedBytes = new byte[rijndaelCipher.getOutputSize(plainBytes.length)];
-
-					int outOff = rijndaelCipher.processBytes(plainBytes, 0, plainBytes.length, tmpEncryptedBytes, 0);
-					outOff += rijndaelCipher.doFinal(tmpEncryptedBytes, outOff); // FIXME: With CTS(Ciphertext Stealing) mode, org.bouncycastle.crypto.DataLengthException: need at least one block of input for CTS
-
-					encryptedBytes = Arrays.copyOf(tmpEncryptedBytes, outOff);
-				}
-				else
-				{
-					rijndaelAEADCipher.init(true, params);
-
-					final byte[] tmpEncryptedBytes = new byte[rijndaelAEADCipher.getOutputSize(plainBytes.length)];
-
-					int outOff = rijndaelAEADCipher.processBytes(plainBytes, 0, plainBytes.length, tmpEncryptedBytes, 0);
-					outOff += rijndaelAEADCipher.doFinal(tmpEncryptedBytes, outOff);
-
-					encryptedBytes = Arrays.copyOf(tmpEncryptedBytes, outOff);
-				}
-			}
-			else
-			{
-				if (cipherParameterSpec == null)
-					cipher.init(Cipher.ENCRYPT_MODE, keySpec); // Without IV
-				else
-					cipher.init(Cipher.ENCRYPT_MODE, keySpec, cipherParameterSpec); // With IV
-
-				encryptedBytes = cipher.doFinal(plainBytes);
-			}
-			// </editor-fold>
-
-			// <editor-fold desc="Encode the encrypted-text with Base64 if the option is present">
-			return encodeEncrypted ? Base64.getEncoder().encode(encryptedBytes) : encryptedBytes;
-			// </editor-fold>
-		}
-		catch (final NoSuchProviderException e)
-		{
-			throw new SymmetricKeyCryptionException(CipherExceptionType.NO_SUCH_ALGORITHM_PROVIDER, cipherAlgorithm, e);
-		}
-		catch (final NoSuchAlgorithmException | NoSuchPaddingException e)
-		{
-			throw new SymmetricKeyCryptionException(CipherExceptionType.UNSUPPORTED_CIPHER, cipherAlgorithm, e);
-		}
-		catch (final DataLengthException | AEADBadTagException e)
-		{
-			throw new SymmetricKeyCryptionException(CipherExceptionType.CORRUPTED_AEAD_TAG, e);
-		}
-		catch (final IllegalStateException | IllegalArgumentException | ArrayIndexOutOfBoundsException | IllegalBlockSizeException | BadPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | InvalidCipherTextException | NegativeArraySizeException e)
-		{
-			throw new SymmetricKeyCryptionException(CipherExceptionType.CORRUPTED_KEY_OR_INPUT, e);
+			default:
+				return new SpiBasedCipher(algorithm, mode, padding, unitBytes);
 		}
 	}
 
-	byte[] doDecrypt(byte[] encryptedBytes) throws SymmetricKeyCryptionException
+	byte[] doEncrypt(byte[] bytes) throws CipherException
 	{
-		// <editor-fold desc="Charsets setup">
-		final Charset keyCharset = Optional.ofNullable((CharsetWrapper) keyTextCharsetCB.getSelectedItem()).orElse(CharsetWrapper.UTF_8).getCharset();
-		final Charset ivCharset = Optional.ofNullable((CharsetWrapper) ivTextCharsetCB.getSelectedItem()).orElse(CharsetWrapper.UTF_8).getCharset();
-		// </editor-fold>
+		if (bytes == null || bytes.length == 0)
+			throw new CipherException(CipherExceptionType.EMPTY_INPUT);
 
-		// <editor-fold desc="Cipher settings">
 		final CipherAlgorithm cipherAlg = Optional.ofNullable((CipherAlgorithm) cipherAlgorithmCB.getSelectedItem()).orElse(CipherAlgorithm.AES);
-		final CipherAlgorithmMode cipherMode = Optional.ofNullable((CipherAlgorithmMode) cipherAlgorithmModeCB.getSelectedItem()).orElse(CipherAlgorithmMode.ECB);
-		final int cipherUnitBytes = (int) Optional.ofNullable(cipherAlgorithmModeCFBOFBUnitBytesCB.getSelectedItem()).orElse(16);
-		final CipherAlgorithmPadding cipherPadding = Optional.ofNullable((CipherAlgorithmPadding) cipherAlgorithmPaddingCB.getSelectedItem()).orElse(CipherAlgorithmPadding.PKCS5);
-		// </editor-fold>
+		final CipherMode cipherMode = Optional.ofNullable((CipherMode) cipherAlgorithmModeCB.getSelectedItem()).orElse(CipherMode.ECB);
 
-		// <editor-fold desc="Key sizes">
-		int keySizeBytes = -1;
-		if (cipherAlg.getAvailableKeySizes() != null)
-			keySizeBytes = (int) Optional.ofNullable(keySizeCB.getSelectedItem()).orElse(256) / 8; // 8 bit = 1 byte
-
-		int minKeySizeBytes = keySizeBytes;
-		int maxKeySizeBytes = keySizeBytes;
-
-		// If cipher algorithm dependant key size is available, Use it instead.
-		if (cipherAlg.getMinKeySize() != -1)
-			minKeySizeBytes = cipherAlg.getMinKeySize() / 8; // 8 bit = 1 byte
-		if (cipherAlg.getMaxKeySize() != -1)
-			maxKeySizeBytes = cipherAlg.getMaxKeySize() / 8; // 8 bit = 1 byte
-		// </editor-fold>
-
-		// Misc. options
-		final boolean usingIV = cipherMode.isUsingIV() || cipherAlg.isStreamCipher();
-		final boolean decodeEncrypted = base64EncryptedText.isSelected();
+		// Padding
 		final String paddingCharFieldText = paddingCharField.getText();
+		if (paddingCharFieldText == null || paddingCharFieldText.isEmpty())
+			throw new CipherException(CipherExceptionType.EMPTY_PADDING);
 
-		// <editor-fold desc="Key and IV">
-		String key = keyTextField.getText();
-		int keyLength = 0, keyBytesSize = 0;
+		final byte paddingByte = (byte) (paddingCharField.getText().charAt(0) & 0xFF);
 
-		String iv = ivTextField.getText();
-		int ivLength = 0, ivBytesSize = 0;
-		// </editor-fold>
+		final AbstractCipher cipher = createCipher(cipherAlg, cipherMode, Optional.ofNullable((CipherPadding) cipherAlgorithmPaddingCB.getSelectedItem()).orElse(CipherPadding.PKCS5), (int) Optional.ofNullable(cipherAlgorithmModeCFBOFBUnitBytesCB.getSelectedItem()).orElse(16));
 
-		// Check the resources
-		if (encryptedBytes == null || key == null || encryptedBytes.length == 0 || key.isEmpty() || usingIV && (iv == null || iv.isEmpty()) || paddingCharFieldText == null || paddingCharFieldText.isEmpty())
+		Main.LOGGER.info(cipher.toString());
+
+		final byte[] key = getKey(cipherAlg, paddingByte);
+		if (key == null)
+			throw new CipherException(CipherExceptionType.EMPTY_KEY);
+		cipher.setKey(key);
+
+		if (cipher.requireIV())
+		{
+			final byte[] iv = getInitialVector(cipher, paddingByte);
+			if (iv == null)
+				throw new CipherException(CipherExceptionType.EMPTY_IV);
+			cipher.setIV(iv, (int) Optional.ofNullable(cipherAlgorithmModeAEADTagLenCB.getSelectedItem()).orElse(128));
+		}
+
+		cipher.init(Cipher.ENCRYPT_MODE);
+
+		if (cipher.requirePaddedInput())
+			bytes = CipherHelper.padMultipleOf(bytes, cipher.getBlockSize(), paddingByte);
+
+		final byte[] result = cipher.doFinal(bytes);
+		if (result == null)
+			throw new CipherException(CipherExceptionType.EMPTY_RESPONSE);
+		return base64EncryptedText.isSelected() ? Base64.getEncoder().encode(result) : result;
+	}
+
+	byte[] doDecrypt(byte[] bytes) throws CipherException
+	{
+		if (bytes == null || bytes.length == 0)
 			return null;
 
-		final char paddingChar = paddingCharField.getText().charAt(0);
-
-		// <editor-fold desc="Decode the encrypted-text with Base64 if the option is present">
-		if (decodeEncrypted)
+		if (base64EncryptedText.isSelected())
 			try
 			{
-				encryptedBytes = Base64.getDecoder().decode(encryptedBytes);
+				bytes = Base64.getDecoder().decode(bytes);
 			}
 			catch (final IllegalArgumentException e)
 			{
-				throw new SymmetricKeyCryptionException(CipherExceptionType.BASE64_DECODE_EXCEPTION, null, "Base64-bytearray: " + new String(encryptedBytes, StandardCharsets.UTF_8), e);
-			}
-		// </editor-fold>
-
-		// Key clamp
-		key = clamp(keyCharset, key, minKeySizeBytes, maxKeySizeBytes, paddingChar);
-
-		final String cipherAlgorithm = getAlgorithmString(cipherAlg, cipherMode, cipherPadding, keySizeBytes, cipherUnitBytes);
-		final int stringByteArrayLength = encryptedBytes.length;
-
-		final boolean isLEA = cipherAlg == CipherAlgorithm.LEA;
-		final boolean isRijndael = cipherAlg == CipherAlgorithm.Rijndael;
-
-		final int rijndaelBlockSize = (int) Optional.ofNullable(rijndaelBlockSizeCB.getSelectedItem()).orElse(256);
-
-		try
-		{
-			// <editor-fold desc="Create the cipher">
-			Cipher cipher = null;
-
-			BufferedBlockCipher rijndaelCipher = null;
-			AEADBlockCipher rijndaelAEADCipher = null;
-
-			BlockCipherMode leaCipher = null;
-			BlockCipherModeAE leaAEADCipher = null;
-
-			final int cipherBlockSize;
-			if (isLEA)
-			{
-				if (cipherMode.isAEADMode())
-					leaAEADCipher = getLEAAEADCipher(cipherMode);
-				else
-					leaCipher = getLEACipher(cipherMode);
-				cipherBlockSize = 16;
-			}
-			else if (isRijndael)
-			{
-				if (cipherMode.isAEADMode())
-					rijndaelAEADCipher = createRijndaelAEADCipher(cipherMode, rijndaelBlockSize);
-				else
-					rijndaelCipher = createRijndaelCipher(cipherMode, cipherPadding, cipherUnitBytes, rijndaelBlockSize);
-				cipherBlockSize = rijndaelBlockSize / 8;
-			}
-			else
-			{
-				cipher = Cipher.getInstance(cipherAlgorithm, cipherAlg.getProviderName());
-				cipherBlockSize = cipher.getBlockSize();
-			}
-			// </editor-fold>
-
-			dumpCipherAlgorithm(cipherAlg, cipherMode, cipherPadding);
-
-			// <editor-fold desc="Create SecretKeySpec">
-			final byte[] keyBytes = key.getBytes(keyCharset);
-			keyLength = key.length();
-			keyBytesSize = keyBytes.length;
-			final Key keySpec = new SecretKeySpec(keyBytes, cipherAlg.getId());
-			// </editor-fold>
-
-			// <editor-fold desc="IV initialization">
-			byte[] ivBytes = null;
-			if (usingIV)
-			{
-				iv = getInitialVector(ivCharset, cipherAlg, cipherMode, iv, paddingChar, cipherBlockSize);
-
-				ivBytes = iv.getBytes(ivCharset);
-				ivLength = iv.length();
-				ivBytesSize = ivBytes.length;
-			}
-			// </editor-fold>
-
-			// <editor-fold desc="Cipher parameter spec initialization">
-			AlgorithmParameterSpec cipherParameterSpec = null;
-			final int aeadTagLength = (int) Optional.ofNullable(cipherAlgorithmModeAEADTagLenCB.getSelectedItem()).orElse(128);
-			if (!isLEA && !isRijndael)
-			{
-				// Parameters setup
-				final String gost28147SBoxName = Optional.ofNullable((String) gost28147SBoxCB.getSelectedItem()).orElse("Default").toUpperCase(Locale.ENGLISH);
-				final int rc5Rounds = (int) rc5RoundsSpinner.getValue();
-
-				switch (cipherAlg)
-				{
-					case GOST28147:
-						cipherParameterSpec = usingIV ? new GOST28147ParameterSpec(gost28147SBoxName, ivBytes) : new GOST28147ParameterSpec(gost28147SBoxName);
-						break;
-					case RC2:
-						cipherParameterSpec = usingIV ? new RC2ParameterSpec(0, ivBytes) : new RC2ParameterSpec(0);
-						break;
-					case RC5_32:
-						cipherParameterSpec = usingIV ? new RC5ParameterSpec(0, rc5Rounds, 32, ivBytes) : new RC5ParameterSpec(0, rc5Rounds, 32);
-						break;
-					case RC5_64:
-						cipherParameterSpec = usingIV ? new RC5ParameterSpec(0, rc5Rounds, 64, ivBytes) : new RC5ParameterSpec(0, rc5Rounds, 64);
-						break;
-					default:
-						if (usingIV)
-							if (cipherAlg == CipherAlgorithm.AES && cipherMode == CipherAlgorithmMode.GCM) // AES-Dedicated parameter spec
-								cipherParameterSpec = new GCMParameterSpec(aeadTagLength, ivBytes);
-							else
-								cipherParameterSpec = cipherMode.isAEADMode() ? new AEADParameterSpec(ivBytes, aeadTagLength, null) : new IvParameterSpec(ivBytes);
-				}
-			}
-			// </editor-fold>
-
-			dumpKeyAndIV(key, keyLength, keyBytesSize, iv, ivLength, ivBytesSize);
-
-			// <editor-fold desc="Initialize the cipher and decrypt">
-
-			if (isLEA)
-			{
-				if (leaAEADCipher == null)
-				{
-					// Non-AEAD
-					if (cipherPadding == CipherAlgorithmPadding.PKCS5)
-						leaCipher.setPadding(new PKCS5Padding(16));
-
-					if (cipherMode == CipherAlgorithmMode.ECB)
-						leaCipher.init(Mode.DECRYPT, keyBytes);
-					else
-						leaCipher.init(Mode.DECRYPT, keyBytes, ivBytes);
-
-					return leaCipher.doFinal(encryptedBytes);
-				}
-				// AEAD
-				leaAEADCipher.init(Mode.DECRYPT, keyBytes, ivBytes, aeadTagLength);
-				return leaAEADCipher.doFinal(encryptedBytes);
-			}
-			if (isRijndael)
-			{
-				final CipherParameters params;
-				if (usingIV)
-					params = cipherMode.isAEADMode() ? new AEADParameters(new KeyParameter(keyBytes), aeadTagLength, ivBytes) : new ParametersWithIV(new KeyParameter(keyBytes), ivBytes);
-				else
-					params = new KeyParameter(keyBytes);
-
-				/* https://stackoverflow.com/questions/50441959/how-can-i-do-for-rijndael-256-with-bouncycastle-api */
-				if (rijndaelAEADCipher == null)
-				{
-					rijndaelCipher.init(false, params);
-					final byte[] tmpDecryptedBytes = new byte[rijndaelCipher.getOutputSize(encryptedBytes.length)];
-
-					int outOff = rijndaelCipher.processBytes(encryptedBytes, 0, encryptedBytes.length, tmpDecryptedBytes, 0);
-					outOff += rijndaelCipher.doFinal(tmpDecryptedBytes, outOff);
-
-					return Arrays.copyOf(tmpDecryptedBytes, outOff);
-				}
-				rijndaelAEADCipher.init(false, params);
-
-				final byte[] tmpDecryptedBytes = new byte[rijndaelAEADCipher.getOutputSize(encryptedBytes.length)];
-
-				int outOff = rijndaelAEADCipher.processBytes(encryptedBytes, 0, encryptedBytes.length, tmpDecryptedBytes, 0);
-				outOff += rijndaelAEADCipher.doFinal(tmpDecryptedBytes, outOff);
-
-				return Arrays.copyOf(tmpDecryptedBytes, outOff);
-			}
-			if (cipherParameterSpec == null)
-				cipher.init(Cipher.DECRYPT_MODE, keySpec); // Without IV
-			else
-				cipher.init(Cipher.DECRYPT_MODE, keySpec, cipherParameterSpec); // With IV
-
-			return cipher.doFinal(encryptedBytes);
-			// </editor-fold>
-		}
-		catch (final NoSuchProviderException e)
-		{
-			throw new SymmetricKeyCryptionException(CipherExceptionType.NO_SUCH_ALGORITHM_PROVIDER, cipherAlgorithm, e);
-		}
-		catch (final NoSuchAlgorithmException | NoSuchPaddingException e)
-		{
-			throw new SymmetricKeyCryptionException(CipherExceptionType.UNSUPPORTED_CIPHER, cipherAlgorithm, e);
-		}
-		catch (final DataLengthException | AEADBadTagException e)
-		{
-			throw new SymmetricKeyCryptionException(CipherExceptionType.CORRUPTED_AEAD_TAG, e);
-		}
-		catch (final IllegalStateException | IllegalArgumentException | ArrayIndexOutOfBoundsException | IllegalBlockSizeException | BadPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | InvalidCipherTextException | NegativeArraySizeException e)
-		{
-			throw new SymmetricKeyCryptionException(CipherExceptionType.CORRUPTED_KEY_OR_INPUT, e);
-		}
-	}
-
-	private static void dumpCipherAlgorithm(final CipherAlgorithm alg, final CipherAlgorithmMode mode, final CipherAlgorithmPadding padding)
-	{
-		Main.LOGGER.info(String.format("algorithm: %s(%s) (provider: %s) / mode: %s / padding: %s(%s)", alg, alg.getId(), alg.getProviderName(), mode, padding, padding.getPaddingName()));
-	}
-
-	private static BlockCipherMode getLEACipher(final CipherAlgorithmMode mode)
-	{
-
-		switch (mode)
-		{
-			case ECB:
-				return new ECB();
-			case CBC:
-			case PCBC:
-				return new CBC();
-			case CFB:
-				return new CFB();
-			case OFB:
-				return new OFB();
-			case CTR:
-				return new CTR();
-		}
-
-		return null;
-	}
-
-	private static BlockCipherModeAE getLEAAEADCipher(final CipherAlgorithmMode mode)
-	{
-
-		switch (mode)
-		{
-			case CCM:
-				return new CCM();
-			case GCM:
-				return new GCM();
-		}
-
-		return null;
-	}
-
-	/**
-	 * @param  charset
-	 *                     Charset used while padding
-	 * @param  string
-	 *                     String to apply truncation/pad
-	 * @param  minLength
-	 *                     Minimum string length; If the message length is shorter than this parameter, padding characters will be added to the tail of message to fill the space
-	 * @param  maxLength
-	 *                     Maximum string length; If the message length is loger than this parameter, the message will be truncated
-	 * @param  paddingChar
-	 *                     Padding character
-	 * @return             The truncated/padded string
-	 */
-	private static String clamp(final Charset charset, final String string, final int minLength, final int maxLength, final char paddingChar)
-	{
-		final byte[] original = string.getBytes(charset);
-
-		if (maxLength != -1 && original.length > maxLength)
-		{
-			// Truncation
-			final byte[] truncated = new byte[maxLength];
-			System.arraycopy(original, 0, truncated, 0, maxLength);
-			return new String(truncated, charset);
-		}
-		if (original.length < minLength)
-		{
-			// Pad
-			final byte[] padded = new byte[minLength];
-			System.arraycopy(original, 0, padded, 0, original.length);
-			final byte[] paddingCharBytes = String.valueOf(paddingChar).getBytes(charset);
-			int index = original.length;
-			final int indexLimit = padded.length;
-			while (index < indexLimit)
-			{
-				System.arraycopy(paddingCharBytes, 0, padded, index, Math.min(indexLimit - index, paddingCharBytes.length));
-				index += paddingCharBytes.length;
+				throw new CipherException(CipherExceptionType.BASE64_DECODE_EXCEPTION, new String(bytes, StandardCharsets.UTF_8));
 			}
 
-			return new String(padded, charset);
-		}
+		final CipherAlgorithm cipherAlg = Optional.ofNullable((CipherAlgorithm) cipherAlgorithmCB.getSelectedItem()).orElse(CipherAlgorithm.AES);
+		final CipherMode cipherMode = Optional.ofNullable((CipherMode) cipherAlgorithmModeCB.getSelectedItem()).orElse(CipherMode.ECB);
 
-		return string;
-	}
+		// Padding
+		final String paddingCharFieldText = paddingCharField.getText();
+		if (paddingCharFieldText == null || paddingCharFieldText.isEmpty())
+			return null;
 
-	private static String getAlgorithmString(final CipherAlgorithm algorithm, final CipherAlgorithmMode mode, final CipherAlgorithmPadding padding, final int keySizeBytes, final int unitBytes)
-	{
-		final StringBuilder algorithmBuilder = new StringBuilder(algorithm.getId());
+		final byte paddingByte = (byte) (paddingCharField.getText().charAt(0) & 0xFF);
 
-		final int keySizeBits = keySizeBytes << 3;
+		final AbstractCipher cipher = createCipher(cipherAlg, cipherMode, Optional.ofNullable((CipherPadding) cipherAlgorithmPaddingCB.getSelectedItem()).orElse(CipherPadding.PKCS5), (int) Optional.ofNullable(cipherAlgorithmModeCFBOFBUnitBytesCB.getSelectedItem()).orElse(16));
 
-		if (algorithm.getAvailableKeySizes() != null && algorithm == CipherAlgorithm.AES && padding == CipherAlgorithmPadding.NONE)
-			algorithmBuilder.append("_").append(keySizeBits); // AES_128, AES_192, AES_256
-		else if (algorithm == CipherAlgorithm.Threefish)
-			algorithmBuilder.append("-").append(keySizeBits);
+		Main.LOGGER.info(cipher.toString());
 
-		/* <Algorithm>/<Mode>/<Padding> transformation format */
-		if (mode == CipherAlgorithmMode.CFB || mode == CipherAlgorithmMode.OFB)
-			algorithmBuilder.append("/").append(mode).append(unitBytes).append("/").append(padding.getPaddingName()); // CFBn, OFBn
-		else
-			algorithmBuilder.append("/").append(mode).append("/").append(padding.getPaddingName());
+		final byte[] key = getKey(cipherAlg, paddingByte);
+		if (key == null)
+			return null;
+		cipher.setKey(key);
 
-		// System.out.println(ret);
-		return algorithmBuilder.toString();
-	}
-
-	private static BufferedBlockCipher createRijndaelCipher(final CipherAlgorithmMode cipherMode, final CipherAlgorithmPadding cipherPadding, final int unitBytes, final int blocksize)
-	{
-
-		BlockCipherPadding padding = null;
-		switch (cipherPadding)
+		if (cipher.requireIV())
 		{
-			case ZERO_FILL:
-				padding = new ZeroBytePadding();
-				break;
-			case PKCS5:
-				padding = new PKCS7Padding();
-				break;
-			case ISO10126:
-				padding = new ISO10126d2Padding();
-				break;
-			case X923:
-				padding = new X923Padding();
-				break;
-			case ISO7816_4:
-				padding = new ISO7816d4Padding();
-				break;
-			case TBC:
-				padding = new TBCPadding();
+			final byte[] iv = getInitialVector(cipher, paddingByte);
+			if (iv == null)
+				return null;
+			cipher.setIV(iv, (int) Optional.ofNullable(cipherAlgorithmModeAEADTagLenCB.getSelectedItem()).orElse(128));
 		}
 
-		BlockCipher cipher = null;
+		cipher.init(Cipher.DECRYPT_MODE);
 
-		BufferedBlockCipher bufferedCipher = null;
-		switch (cipherMode)
-		{
-			case CBC:
-			case PCBC:
-				cipher = new CBCBlockCipher(new RijndaelEngine(blocksize));
-				break;
-			case CFB:
-				cipher = new CFBBlockCipher(new RijndaelEngine(blocksize), unitBytes);
-				break;
-			case OFB:
-				cipher = new OFBBlockCipher(new RijndaelEngine(blocksize), unitBytes);
-				break;
-			case CTR:
-				cipher = new SICBlockCipher(new RijndaelEngine(blocksize));
-				break;
-			case CTS:
-				bufferedCipher = new CTSBlockCipher(new CBCBlockCipher(new RijndaelEngine(blocksize)));
-				break;
-			default:
-				cipher = new RijndaelEngine(blocksize);
-		}
+		if (cipher.requirePaddedInput())
+			bytes = CipherHelper.padMultipleOf(bytes, cipher.getBlockSize(), paddingByte);
 
-		if (bufferedCipher == null)
-			bufferedCipher = padding == null ? new BufferedBlockCipher(cipher) : new PaddedBufferedBlockCipher(cipher, padding);
-
-		return bufferedCipher;
-	}
-
-	private static AEADBlockCipher createRijndaelAEADCipher(final CipherAlgorithmMode cipherMode, final int blocksize)
-	{
-		final AEADBlockCipher cipher;
-
-		switch (cipherMode)
-		{
-			case CCM:
-				cipher = new CCMBlockCipher(new RijndaelEngine(blocksize));
-				break;
-			case GCM:
-				cipher = new GCMBlockCipher(new RijndaelEngine(blocksize));
-				break;
-			default:
-				cipher = null;
-		}
-		return cipher;
+		return cipher.doFinal(bytes);
 	}
 }

@@ -6,6 +6,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
+import java.lang.reflect.InvocationTargetException;
+import java.security.Provider;
 import java.security.Security;
 import java.util.ArrayDeque;
 import java.util.Collection;
@@ -98,12 +100,11 @@ public final class Main extends JFrame
 		/* https://stackoverflow.com/questions/6442012/whats-the-best-way-to-integrate-the-bouncy-castle-provider-in-a-java-program */
 		try
 		{
-			Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider"); // Check BouncyCastle provider existence
-			Security.addProvider(new BouncyCastleProvider());
+			Security.addProvider((Provider) Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider").getConstructor().newInstance());
 		}
-		catch (final ClassNotFoundException | SecurityException e)
+		catch (final NoClassDefFoundError | ClassNotFoundException | SecurityException | NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e)
 		{
-			exceptionMessageBox("Failed to load BouncyCastle library." + lineSeparator + "This program requires BouncyCastle library to support a lot of features.", null, e);
+			exceptionMessageBox("Failed to register/load BouncyCastle library", null, e);
 			dispose();
 		}
 		// </editor-fold>

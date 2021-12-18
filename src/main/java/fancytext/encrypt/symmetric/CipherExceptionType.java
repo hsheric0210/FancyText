@@ -2,18 +2,21 @@ package fancytext.encrypt.symmetric;
 
 public enum CipherExceptionType
 {
-	NO_SUCH_ALGORITHM_PROVIDER("It seems your Java version is not supporting SunJCE or BouncyCastle correctly"),
-	UNSUPPORTED_CIPHER("Unsupported cipher algorithm"),
-	CORRUPTED_AEAD_TAG("Corrupted AEAD tag"),
-	BASE64_DECODE_EXCEPTION("Corrupted Base64 byte array"),
-	CORRUPTED_KEY_OR_INPUT("Corrupted key or input"),
-	ILLEGAL_BLOCK_SIZE("Illegal block size or invalid key"),
-	BAD_PADDING("Corruped padding or invalid key"),
+	EMPTY_INPUT("Input is empty"),
+	EMPTY_PADDING("Padding byte is empty"),
+	EMPTY_KEY("Key is empty"),
+	EMPTY_IV("Initial vector is empty"),
+	EMPTY_RESPONSE("Cipher returned null"),
+	ABSENT_ARGUMENT("Argument not present"),
+	PROVIDER_UNAVAILABLE("It seems your Java version is not supporting SunJCE or BouncyCastle correctly"),
+	UNSUPPORTED_ALGORITHM("Unsupported cipher algorithm"),
+	UNSUPPORTED_MODE("Unsupported cipher mode"),
+	UNSUPPORTED_PADDING("Unsupported cipher padding"),
 	INVALID_KEY("Invalid key"),
-	UNAVAILABLE_PROVIDER("Provider unavailable"),
-	UNSUPPORTED_ALGORITHM("Unsupported algorithm"),
-	UNSUPPORTED_PADDING("Unsupported padding"),
-	INVALID_CIPHERTEXT("Invalid cipher text");
+	INVALID_IV("Invaild initial vector or nonce"),
+	BASE64_DECODE_EXCEPTION("Corrupted Base64 byte array"),
+	INITIALIZATION_UNSUCCESSFUL("Cipher initialization unsuccessful"),
+	PROCESS_UNSUCCESSFUL("Cipher process unsuccessful");
 
 	public final String description;
 

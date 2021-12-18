@@ -1,37 +1,35 @@
 package fancytext.encrypt.symmetric.cipher.spiBased;
 
-import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.spec.AlgorithmParameterSpec;
-import java.util.Objects;
+import java.util.StringJoiner;
 
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.bouncycastle.jcajce.spec.AEADParameterSpec;
 
+import fancytext.Main;
 import fancytext.encrypt.symmetric.CipherAlgorithm;
-import fancytext.encrypt.symmetric.CipherAlgorithmMode;
-import fancytext.encrypt.symmetric.CipherAlgorithmPadding;
 import fancytext.encrypt.symmetric.CipherExceptionType;
+import fancytext.encrypt.symmetric.CipherMode;
+import fancytext.encrypt.symmetric.CipherPadding;
 import fancytext.encrypt.symmetric.cipher.AbstractCipher;
-import fancytext.encrypt.symmetric.cipher.CipherException;
+import fancytext.encrypt.symmetric.CipherException;
 
 public class SpiBasedCipher extends AbstractCipher
 {
-	private final String cipherSpi;
-	private final Cipher theCipher;
-	private final int unitBytes;
-	private Key key;
-	private AlgorithmParameterSpec parameter;
+	protected final String cipherSpi;
+	protected final Cipher theCipher;
+	protected final int unitBytes;
+	protected Key key;
+	protected AlgorithmParameterSpec parameter;
 
-	public SpiBasedCipher(final CipherAlgorithm algorithm, final CipherAlgorithmMode mode, final CipherAlgorithmPadding padding, final int unitBytes) throws CipherException
+	public SpiBasedCipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding, final int unitBytes) throws CipherException
 	{
 		super(algorithm, mode, padding);
 		this.unitBytes = unitBytes;
@@ -42,7 +40,7 @@ public class SpiBasedCipher extends AbstractCipher
 		}
 		catch (final NoSuchProviderException e)
 		{
-			throw new CipherException(CipherExceptionType.UNAVAILABLE_PROVIDER, e);
+			throw new CipherException(CipherExceptionType.PROVIDER_UNAVAILABLE, e);
 		}
 		catch (final NoSuchAlgorithmException e)
 		{
@@ -59,7 +57,7 @@ public class SpiBasedCipher extends AbstractCipher
 		final StringBuilder algorithmBuilder = new StringBuilder(getAlgorithmID()).append('/');
 
 		/* <ID>/<Mode>/<Padding> transformation format */
-		if (mode == CipherAlgorithmMode.CFB || mode == CipherAlgorithmMode.OFB)
+		if (mode.isUsingUnitBytes())
 			algorithmBuilder.append(mode).append(unitBytes).append('/').append(padding.getPaddingName()); // CFBn, OFBn
 		else
 			algorithmBuilder.append(mode).append('/').append(padding.getPaddingName());
@@ -73,27 +71,60 @@ public class SpiBasedCipher extends AbstractCipher
 	}
 
 	@Override
-	public void setKey(final byte[] key)
+	protected void dumpAdditionalInformations(final StringBuilder builder)
 	{
-		this.key = new SecretKeySpec(key, algorithm.getId());
+		if (mode.isUsingUnitBytes())
+			builder.append("Cipher unit-bytes: ").append(unitBytes).append(Main.lineSeparator);
 	}
 
 	@Override
-	public void setIV(final byte[] iv, final int macSize)
+	protected void serializeAdditionalInformations(final StringJoiner joiner)
 	{
-		parameter = mode.isAEADMode() ? new AEADParameterSpec(iv, macSize) : new IvParameterSpec(iv);
+		if (mode.isUsingUnitBytes())
+			joiner.add("UnitBytes=" + unitBytes);
+	}
+
+	@Override
+	public void setKey(final byte[] key) throws CipherException
+	{
+		try
+		{
+			this.key = new SecretKeySpec(key, algorithm.getId());
+		}
+		catch (final Throwable e)
+		{
+			throw new CipherException(CipherExceptionType.INVALID_KEY, e);
+		}
+	}
+
+	@Override
+	public void setIV(final byte[] iv, final int macSize) throws CipherException
+	{
+		try
+		{
+			parameter = mode.isAEADMode() ? new AEADParameterSpec(iv, macSize) : new IvParameterSpec(iv);
+		}
+		catch (final Throwable e)
+		{
+			throw new CipherException(CipherExceptionType.INVALID_IV, e);
+		}
 	}
 
 	@Override
 	public void init(final int opMode) throws CipherException
 	{
+		requirePresent(key, "Key");
+
 		try
 		{
-			theCipher.init(opMode, Objects.requireNonNull(key, "Key is not set!"));
+			if (parameter == null)
+				theCipher.init(opMode, key);
+			else
+				theCipher.init(opMode, key, parameter);
 		}
-		catch (final InvalidKeyException e)
+		catch (final Throwable e)
 		{
-			throw new CipherException(CipherExceptionType.INVALID_KEY, e);
+			throw new CipherException(CipherExceptionType.INITIALIZATION_UNSUCCESSFUL, e);
 		}
 	}
 
@@ -104,13 +135,9 @@ public class SpiBasedCipher extends AbstractCipher
 		{
 			return theCipher.doFinal(bytes);
 		}
-		catch (final IllegalBlockSizeException e)
+		catch (final Throwable e)
 		{
-			throw new CipherException(CipherExceptionType.ILLEGAL_BLOCK_SIZE, e);
-		}
-		catch (final BadPaddingException e)
-		{
-			throw new CipherException(CipherExceptionType.BAD_PADDING, e);
+			throw new CipherException(CipherExceptionType.PROCESS_UNSUCCESSFUL, e);
 		}
 	}
 

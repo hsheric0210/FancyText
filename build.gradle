@@ -8,22 +8,45 @@
 plugins {
 	id 'java'
 	id 'idea'
-	id 'com.github.johnrengelman.shadow' version '6.1.0'
 }
 
 repositories {
-	jcenter()
+	mavenCentral()
 }
 
 dependencies {
-	implementation fileTree(dir: 'libs', include: ['*.jar'])
+	implementation fileTree(dir: 'libs', include: ['bcprov-*.jar'])
+}
+
+task generateSources(type: Copy) {
+	delete '$buildDir/sources'
+
+	var bcprov = "BouncyCastle library not found"
+
+	for (f in new File(rootDir, "libs").listFiles())
+	{
+		if (f.name.startsWith("bcprov") && f.getName().endsWith(".jar")) {
+			bcprov = f.name
+			System.out.println("$bcprov")
+		}
+	}
+
+	filteringCharset = 'utf8'
+	from 'src/main/java'
+	into "$buildDir/sources"
+	filter { line -> line.replace('%BouncyCastleProvider%', bcprov) }
 }
 
 compileJava.options.encoding = 'UTF-8'
+compileJava.setSource "$buildDir/sources"
+compileJava.dependsOn generateSources
 
 jar {
-	finalizedBy shadowJar
+	from('libs') {
+		include 'bcprov-*.jar'
+	}
+
 	manifest {
-		attributes 'Main-Class': 'fancytext.Main'
+		attributes 'Main-Class': 'fancytext.Launch'
 	}
 }

@@ -1,8 +1,8 @@
-package fancytext.encrypt.symmetric.cipher;
+package fancytext.encrypt.symmetric.cipher.rijndael;
 
 import java.util.Arrays;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.StringJoiner;
 
 import javax.crypto.Cipher;
 
@@ -10,14 +10,16 @@ import org.bouncycastle.crypto.*;
 import org.bouncycastle.crypto.engines.RijndaelEngine;
 import org.bouncycastle.crypto.modes.*;
 import org.bouncycastle.crypto.paddings.*;
-import org.bouncycastle.crypto.params.AEADParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
 
+import fancytext.Main;
 import fancytext.encrypt.symmetric.CipherAlgorithm;
-import fancytext.encrypt.symmetric.CipherAlgorithmMode;
-import fancytext.encrypt.symmetric.CipherAlgorithmPadding;
 import fancytext.encrypt.symmetric.CipherExceptionType;
+import fancytext.encrypt.symmetric.CipherMode;
+import fancytext.encrypt.symmetric.CipherPadding;
+import fancytext.encrypt.symmetric.cipher.AbstractCipher;
+import fancytext.encrypt.symmetric.CipherException;
 
 public class RijndaelCipher extends AbstractCipher
 {
@@ -28,7 +30,7 @@ public class RijndaelCipher extends AbstractCipher
 	private CipherParameters parameters;
 	private final BlockCipherPadding _padding;
 
-	public RijndaelCipher(final CipherAlgorithm algorithm, final CipherAlgorithmMode mode, final CipherAlgorithmPadding padding, final int unitBytes, final int blockSize) throws CipherException
+	public RijndaelCipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding, final int unitBytes, final int blockSize) throws CipherException
 	{
 		super(algorithm, mode, padding);
 		this.unitBytes = unitBytes;
@@ -87,27 +89,57 @@ public class RijndaelCipher extends AbstractCipher
 	}
 
 	@Override
-	public void setKey(final byte[] key)
+	protected void dumpAdditionalInformations(final StringBuilder builder)
 	{
-		parameters = keyParameter = new KeyParameter(key);
+		builder.append("Cipher block size: ").append(blockSize).append(Main.lineSeparator);
 	}
 
 	@Override
-	public void setIV(final byte[] iv, final int macSize)
+	protected void serializeAdditionalInformations(final StringJoiner joiner)
 	{
-		parameters = new ParametersWithIV(Objects.requireNonNull(keyParameter, "Key is not set!"), iv);
+		joiner.add("BlockSize=" + blockSize);
+	}
+
+	@Override
+	public void setKey(final byte[] key) throws CipherException
+	{
+		try
+		{
+			parameters = keyParameter = new KeyParameter(key);
+		}
+		catch (final Throwable e)
+		{
+			throw new CipherException(CipherExceptionType.INVALID_KEY, e);
+		}
+	}
+
+	@Override
+	public void setIV(final byte[] iv, final int macSize) throws CipherException
+	{
+		requirePresent(keyParameter, "Key");
+
+		try
+		{
+			parameters = new ParametersWithIV(keyParameter, iv);
+		}
+		catch (final Throwable e)
+		{
+			throw new CipherException(CipherExceptionType.INVALID_IV, e);
+		}
 	}
 
 	@Override
 	public void init(final int opMode) throws CipherException
 	{
+		requirePresent(parameters, "Key");
+
 		try
 		{
-			theCipher.init(opMode == Cipher.ENCRYPT_MODE, Objects.requireNonNull(parameters, "Key is not set!"));
+			theCipher.init(opMode == Cipher.ENCRYPT_MODE, parameters);
 		}
-		catch (final IllegalArgumentException e)
+		catch (final Throwable e)
 		{
-			throw new CipherException(CipherExceptionType.INVALID_KEY, e);
+			throw new CipherException(CipherExceptionType.INITIALIZATION_UNSUCCESSFUL, e);
 		}
 	}
 
@@ -123,9 +155,9 @@ public class RijndaelCipher extends AbstractCipher
 
 			return Arrays.copyOf(tmpBytes, outOff);
 		}
-		catch (final InvalidCipherTextException | DataLengthException e)
+		catch (final Throwable e)
 		{
-			throw new CipherException(CipherExceptionType.INVALID_CIPHERTEXT, e);
+			throw new CipherException(CipherExceptionType.PROCESS_UNSUCCESSFUL, e);
 		}
 	}
 
