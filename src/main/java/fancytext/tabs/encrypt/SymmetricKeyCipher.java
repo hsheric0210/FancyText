@@ -23,7 +23,7 @@ import fancytext.encrypt.symmetric.cipher.lea.LEACipher;
 import fancytext.encrypt.symmetric.cipher.rijndael.RijndaelAEADCipher;
 import fancytext.encrypt.symmetric.cipher.rijndael.RijndaelCipher;
 import fancytext.encrypt.symmetric.cipher.spiBased.*;
-import fancytext.utils.CharsetWrapper;
+import fancytext.utils.Encoding;
 import fancytext.utils.MultiThreading;
 import fancytext.utils.PlainDocumentWithLimit;
 
@@ -33,13 +33,16 @@ public final class SymmetricKeyCipher extends JPanel
 	private final JTextPane plainTextField;
 	private final JTextPane encryptedTextField;
 	private final JTextField keyTextField;
+	private final JLabel keyTextActualLabel;
 	private final JTextField ivTextField;
-	private final JComboBox<CharsetWrapper> plainTextCharsetCB;
+	private final JLabel ivTextActualLabel;
+
+	private final JComboBox<Encoding> plainTextCharsetCB;
 	private final JComboBox<Integer> keySizeCB;
 	private final JComboBox<CipherMode> cipherAlgorithmModeCB;
 	private final JComboBox<CipherPadding> cipherAlgorithmPaddingCB;
-	private final JComboBox<CharsetWrapper> keyTextCharsetCB;
-	private final JComboBox<CharsetWrapper> ivTextCharsetCB;
+	private final JComboBox<Encoding> keyTextCharsetCB;
+	private final JComboBox<Encoding> ivTextCharsetCB;
 	private final JCheckBox base64EncryptedText;
 	private final JTextField paddingCharField;
 	private final JComboBox<Integer> cipherAlgorithmModeCFBOFBUnitBytesCB;
@@ -427,7 +430,7 @@ public final class SymmetricKeyCipher extends JPanel
 		};
 		gbl_keyTextFieldPanel.rowHeights = new int[]
 		{
-				0, 0
+				0, 0, 0
 		};
 		gbl_keyTextFieldPanel.columnWeights = new double[]
 		{
@@ -435,21 +438,34 @@ public final class SymmetricKeyCipher extends JPanel
 		};
 		gbl_keyTextFieldPanel.rowWeights = new double[]
 		{
-				1.0, Double.MIN_VALUE
+				1.0, 0.0, Double.MIN_VALUE
 		};
 		keyTextFieldPanel.setLayout(gbl_keyTextFieldPanel);
 
 		// Key-text field panel - Key-text field
 		keyTextField = new JTextField();
 		final GridBagConstraints gbc_keyTextField = new GridBagConstraints();
+		gbc_keyTextField.insets = new Insets(0, 0, 5, 5);
 		gbc_keyTextField.fill = GridBagConstraints.HORIZONTAL;
 		gbc_keyTextField.gridx = 0;
 		gbc_keyTextField.gridy = 0;
 		keyTextFieldPanel.add(keyTextField, gbc_keyTextField);
 
+		// Key-text field panel - 'Actual key text' label
+		keyTextActualLabel = new JLabel("");
+		keyTextActualLabel.setLabelFor(keyTextField);
+		keyTextActualLabel.setEnabled(false);
+		final GridBagConstraints gbc_keyTextActualLabel = new GridBagConstraints();
+		gbc_keyTextActualLabel.anchor = GridBagConstraints.LINE_START;
+		gbc_keyTextActualLabel.insets = new Insets(0, 0, 0, 5);
+		gbc_keyTextActualLabel.gridx = 0;
+		gbc_keyTextActualLabel.gridy = 1;
+		keyTextFieldPanel.add(keyTextActualLabel, gbc_keyTextActualLabel);
+
 		// Key-text field panel - Charset panel
 		final JPanel keyTextCharsetPanel = new JPanel();
 		final GridBagConstraints gbc_keyTextCharsetPanel = new GridBagConstraints();
+		gbc_keyTextCharsetPanel.insets = new Insets(0, 0, 5, 0);
 		gbc_keyTextCharsetPanel.anchor = GridBagConstraints.PAGE_START;
 		gbc_keyTextCharsetPanel.gridx = 1;
 		gbc_keyTextCharsetPanel.gridy = 0;
@@ -507,7 +523,7 @@ public final class SymmetricKeyCipher extends JPanel
 		};
 		gbl_ivTextFieldPanel.rowHeights = new int[]
 		{
-				0, 0
+				0, 0, 0
 		};
 		gbl_ivTextFieldPanel.columnWeights = new double[]
 		{
@@ -515,21 +531,34 @@ public final class SymmetricKeyCipher extends JPanel
 		};
 		gbl_ivTextFieldPanel.rowWeights = new double[]
 		{
-				1.0, Double.MIN_VALUE
+				1.0, 0.0, Double.MIN_VALUE
 		};
 		ivTextFieldPanel.setLayout(gbl_ivTextFieldPanel);
 
 		// IV-text/Counter-text field panel - IV-text/Counter-text field
 		ivTextField = new JTextField();
 		final GridBagConstraints gbc_ivTextField = new GridBagConstraints();
+		gbc_ivTextField.insets = new Insets(0, 0, 5, 5);
 		gbc_ivTextField.fill = GridBagConstraints.HORIZONTAL;
 		gbc_ivTextField.gridx = 0;
 		gbc_ivTextField.gridy = 0;
 		ivTextFieldPanel.add(ivTextField, gbc_ivTextField);
 
+		// IV-text/Counter-text field panel - 'Actual IV-text/Counter-text' field
+		ivTextActualLabel = new JLabel("");
+		ivTextActualLabel.setLabelFor(ivTextField);
+		ivTextActualLabel.setEnabled(false);
+		final GridBagConstraints gbc_ivTextActualLabel = new GridBagConstraints();
+		gbc_ivTextActualLabel.anchor = GridBagConstraints.LINE_START;
+		gbc_ivTextActualLabel.insets = new Insets(0, 0, 0, 5);
+		gbc_ivTextActualLabel.gridx = 0;
+		gbc_ivTextActualLabel.gridy = 1;
+		ivTextFieldPanel.add(ivTextActualLabel, gbc_ivTextActualLabel);
+
 		// Plain-text/Decrypted-text field panel - Charset panel
 		final JPanel ivTextCharsetPanel = new JPanel();
 		final GridBagConstraints gbc_ivTextCharsetPanel = new GridBagConstraints();
+		gbc_ivTextCharsetPanel.insets = new Insets(0, 0, 5, 0);
 		gbc_ivTextCharsetPanel.anchor = GridBagConstraints.PAGE_START;
 		gbc_ivTextCharsetPanel.gridx = 1;
 		gbc_ivTextCharsetPanel.gridy = 0;
@@ -990,16 +1019,16 @@ public final class SymmetricKeyCipher extends JPanel
 
 		// <editor-fold desc="List, ComboBox models">
 		// Plain-text charset combo box model
-		plainTextCharsetCB.setModel(new DefaultComboBoxModel<>(CharsetWrapper.values()));
-		plainTextCharsetCB.setSelectedItem(CharsetWrapper.UTF_8); // UTF-8 is default charset
+		plainTextCharsetCB.setModel(new DefaultComboBoxModel<>(Encoding.values()));
+		plainTextCharsetCB.setSelectedItem(Encoding.UTF_8); // UTF-8 is default charset
 
 		// Key-text charset combo box model
-		keyTextCharsetCB.setModel(new DefaultComboBoxModel<>(CharsetWrapper.values()));
-		keyTextCharsetCB.setSelectedItem(CharsetWrapper.UTF_8); // UTF-8 is default charset
+		keyTextCharsetCB.setModel(new DefaultComboBoxModel<>(Encoding.values()));
+		keyTextCharsetCB.setSelectedItem(Encoding.UTF_8); // UTF-8 is default charset
 
 		// IV/Counter-text charset combo box model
-		ivTextCharsetCB.setModel(new DefaultComboBoxModel<>(CharsetWrapper.values()));
-		ivTextCharsetCB.setSelectedItem(CharsetWrapper.UTF_8); // UTF-8 is default charset
+		ivTextCharsetCB.setModel(new DefaultComboBoxModel<>(Encoding.values()));
+		ivTextCharsetCB.setSelectedItem(Encoding.UTF_8); // UTF-8 is default charset
 
 		keySizeCB.setModel(new DefaultComboBoxModel<>(new Integer[]
 		{
@@ -1334,7 +1363,7 @@ public final class SymmetricKeyCipher extends JPanel
 		if (plainBytes == null || plainBytes.length == 0)
 			return false;
 
-		final Charset charset = Optional.ofNullable((CharsetWrapper) plainTextCharsetCB.getSelectedItem()).orElse(CharsetWrapper.UTF_8).getCharset();
+		final Charset charset = StandardCharsets.UTF_8;
 		final boolean toFile = plainFromToFileButton.isSelected();
 
 		if (toFile)
@@ -1394,7 +1423,7 @@ public final class SymmetricKeyCipher extends JPanel
 
 	private byte[] getPlainBytes()
 	{
-		final Charset charset = Optional.ofNullable((CharsetWrapper) plainTextCharsetCB.getSelectedItem()).orElse(CharsetWrapper.UTF_8).getCharset();
+		final Charset charset = StandardCharsets.UTF_8;
 		final boolean fromFile = plainFromToFileButton.isSelected();
 
 		if (fromFile)
@@ -1564,7 +1593,7 @@ public final class SymmetricKeyCipher extends JPanel
 
 	private byte[] getKey(final CipherAlgorithm cipherAlgorithm, final byte paddingByte)
 	{
-		final Charset charset = Optional.ofNullable((CharsetWrapper) keyTextCharsetCB.getSelectedItem()).orElse(CharsetWrapper.UTF_8).getCharset();
+		final Charset charset = StandardCharsets.UTF_8;
 
 		final int defaultKeyLength = cipherAlgorithm.getAvailableKeySizes() != null ? (int) Optional.ofNullable(keySizeCB.getSelectedItem()).orElse(256) / 8 : -1;
 		final int minKeySize = cipherAlgorithm.getMinKeySize();
@@ -1577,11 +1606,13 @@ public final class SymmetricKeyCipher extends JPanel
 		if (keyString == null || keyString.isEmpty())
 			return null;
 
-		final byte[] paddedKey = CipherHelper.pad(keyString.getBytes(charset), minKeyLength, maxKeyLength, paddingByte);
+		final byte[] key = keyString.getBytes(charset);
+		final byte[] paddedKey = CipherHelper.pad(key, minKeyLength, maxKeyLength, paddingByte);
 		final int keyBytesSize = paddedKey.length;
 
 		final String paddedKeyString = new String(paddedKey, charset);
-		EventQueue.invokeLater(() -> keyTextField.setText(paddedKeyString));
+		if (!Arrays.equals(key, paddedKey))
+			EventQueue.invokeLater(() -> keyTextActualLabel.setText("Actual value is \"" + paddedKeyString + "\""));
 		Main.LOGGER.info(String.format("key[%d]: \"%s\" -> paddedKey[%d]: \"%s\" - %d bytes (%d bits)", keyString.length(), keyString, paddedKeyString.length(), paddedKeyString, keyBytesSize, keyBytesSize << 3));
 
 		return paddedKey;
@@ -1589,7 +1620,7 @@ public final class SymmetricKeyCipher extends JPanel
 
 	private byte[] getInitialVector(final AbstractCipher cipher, final byte paddingByte)
 	{
-		final Charset charset = Optional.ofNullable((CharsetWrapper) ivTextCharsetCB.getSelectedItem()).orElse(CharsetWrapper.UTF_8).getCharset();
+		final Charset charset = StandardCharsets.UTF_8;
 
 		final String ivString = ivTextField.getText();
 
@@ -1597,14 +1628,16 @@ public final class SymmetricKeyCipher extends JPanel
 			return null;
 
 		final int ivSize = cipher.getIVSize();
-		final byte[] ivBytes = CipherHelper.pad(ivString.getBytes(charset), ivSize, ivSize, paddingByte);
-		final int ivBytesSize = ivBytes.length;
+		final byte[] iv = ivString.getBytes(charset);
+		final byte[] paddedIV = CipherHelper.pad(iv, ivSize, ivSize, paddingByte);
+		final int paddedIVSize = paddedIV.length;
 
-		final String paddedIVString = new String(ivBytes, charset);
-		EventQueue.invokeLater(() -> ivTextField.setText(paddedIVString));
-		Main.LOGGER.info(String.format("iv[%d]: \"%s\" -> paddedIV[%d]: \"%s\" - %d bytes (%d bits)", ivString.length(), ivString, paddedIVString.length(), paddedIVString, ivBytesSize, ivBytesSize << 3));
+		final String paddedIVString = new String(paddedIV, charset);
+		if (!Arrays.equals(iv, paddedIV))
+			EventQueue.invokeLater(() -> ivTextActualLabel.setText("Actual value is \"" + paddedIVString + "\""));
+		Main.LOGGER.info(String.format("iv[%d]: \"%s\" -> paddedIV[%d]: \"%s\" - %d bytes (%d bits)", ivString.length(), ivString, paddedIVString.length(), paddedIVString, paddedIVSize, paddedIVSize << 3));
 
-		return ivBytes;
+		return paddedIV;
 	}
 
 	private AbstractCipher createCipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding, final int unitBytes) throws CipherException

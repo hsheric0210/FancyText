@@ -18,14 +18,14 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 
 import fancytext.Main;
-import fancytext.utils.CharsetWrapper;
+import fancytext.utils.Encoding;
 import fancytext.utils.MultiThreading;
 
 public final class Base64Coder extends JPanel
 {
 	private static final long serialVersionUID = -5074560595722321177L;
 
-	private final JComboBox<CharsetWrapper> plainTextCharsetCB;
+	private final JComboBox<Encoding> plainTextCharsetCB;
 	private final JTextPane plainTextField;
 	private final JComboBox<Base64Mode> base64ModeCB;
 	private final JTextPane encodedTextField;
@@ -527,8 +527,8 @@ public final class Base64Coder extends JPanel
 		/* List, ComboBox models */
 
 		// Charset combo box model
-		plainTextCharsetCB.setModel(new DefaultComboBoxModel<>(CharsetWrapper.values()));
-		plainTextCharsetCB.setSelectedItem(CharsetWrapper.UTF_8); // UTF-8 is default charset
+		plainTextCharsetCB.setModel(new DefaultComboBoxModel<>(Encoding.values()));
+		plainTextCharsetCB.setSelectedItem(Encoding.UTF_8); // UTF-8 is default charset
 
 		plainFromToTextButton.setSelected(true);
 		encodedFromToTextButton.setSelected(true);
@@ -607,7 +607,7 @@ public final class Base64Coder extends JPanel
 		if (plainBytes == null || plainBytes.length == 0)
 			return false;
 
-		final Charset charset = Optional.ofNullable((CharsetWrapper) plainTextCharsetCB.getSelectedItem()).orElse(CharsetWrapper.UTF_8).getCharset();
+		final Charset charset = StandardCharsets.UTF_8;
 		final boolean toFile = plainFromToFileButton.isSelected();
 
 		if (toFile)
@@ -670,7 +670,7 @@ public final class Base64Coder extends JPanel
 
 	private byte[] getPlainBytes()
 	{
-		final Charset charset = Optional.ofNullable((CharsetWrapper) plainTextCharsetCB.getSelectedItem()).orElse(CharsetWrapper.UTF_8).getCharset();
+		final Charset charset = StandardCharsets.UTF_8;
 		final boolean fromFile = plainFromToFileButton.isSelected();
 
 		if (fromFile)

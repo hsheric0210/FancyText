@@ -8,6 +8,7 @@
 plugins {
 	id 'java'
 	id 'idea'
+	id 'com.github.johnrengelman.shadow' version '6.1.0'
 }
 
 repositories {
@@ -16,6 +17,11 @@ repositories {
 
 dependencies {
 	implementation fileTree(dir: 'libs', include: ['bcprov-*.jar'])
+	implementation 'at.favre.lib:bytes:1.5.0'
+
+	testImplementation 'junit:junit:4.12'
+	testImplementation 'org.powermock:powermock-api-mockito:1.6.6'
+	testImplementation 'org.powermock:powermock-module-junit4:1.6.6'
 }
 
 task generateSources(type: Copy) {
@@ -42,11 +48,18 @@ compileJava.setSource "$buildDir/sources"
 compileJava.dependsOn generateSources
 
 jar {
+	finalizedBy shadowJar
 	from('libs') {
 		include 'bcprov-*.jar'
 	}
 
 	manifest {
 		attributes 'Main-Class': 'fancytext.Launch'
+	}
+}
+
+shadowJar {
+	dependencies {
+		include(dependency('at.favre.lib:bytes'))
 	}
 }
