@@ -1,15 +1,12 @@
 package fancytext.tabs.encrypt;
 
 import java.awt.*;
-import java.io.File;
-import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.StandardOpenOption;
-import java.util.*;
-import java.util.concurrent.ExecutionException;
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.Vector;
 
 import javax.crypto.Cipher;
 import javax.swing.*;
@@ -23,6 +20,7 @@ import fancytext.encrypt.symmetric.cipher.lea.LEACipher;
 import fancytext.encrypt.symmetric.cipher.rijndael.RijndaelAEADCipher;
 import fancytext.encrypt.symmetric.cipher.rijndael.RijndaelCipher;
 import fancytext.encrypt.symmetric.cipher.spiBased.*;
+import fancytext.utils.EncodedIOPanel;
 import fancytext.utils.Encoding;
 import fancytext.utils.MultiThreading;
 import fancytext.utils.PlainDocumentWithLimit;
@@ -30,27 +28,11 @@ import fancytext.utils.PlainDocumentWithLimit;
 public final class SymmetricKeyCipher extends JPanel
 {
 	private static final long serialVersionUID = -7257463203150608739L;
-	private final JTextPane plainTextField;
-	private final JTextPane encryptedTextField;
-	private final JTextField keyTextField;
-	private final JLabel keyTextActualLabel;
-	private final JTextField ivTextField;
-	private final JLabel ivTextActualLabel;
-
-	private final JComboBox<Encoding> plainTextCharsetCB;
 	private final JComboBox<Integer> keySizeCB;
 	private final JComboBox<CipherMode> cipherAlgorithmModeCB;
 	private final JComboBox<CipherPadding> cipherAlgorithmPaddingCB;
-	private final JComboBox<Encoding> keyTextCharsetCB;
-	private final JComboBox<Encoding> ivTextCharsetCB;
-	private final JCheckBox base64EncryptedText;
 	private final JTextField paddingCharField;
 	private final JComboBox<Integer> cipherAlgorithmModeCFBOFBUnitBytesCB;
-	private final JTextField plainFileField;
-	private final JTextField encryptedFileField;
-	private final JRadioButton plainFromToTextButton;
-	private final JRadioButton plainFromToFileButton;
-	private final JRadioButton encryptedFromToFileButton;
 	private final JComboBox<CipherAlgorithm> cipherAlgorithmCB;
 	private final JPanel gost28147SBoxPanel;
 	private final JComboBox<String> gost28147SBoxCB;
@@ -58,6 +40,10 @@ public final class SymmetricKeyCipher extends JPanel
 	private final JSpinner rc5RoundsSpinner;
 	private final JComboBox<Integer> rijndaelBlockSizeCB;
 	private final JComboBox<Integer> cipherAlgorithmModeAEADTagLenCB;
+	private final EncodedIOPanel plainTextPanel;
+	private final EncodedIOPanel keyPanel;
+	private final EncodedIOPanel ivPanel;
+	private final EncodedIOPanel cipherTextPanel;
 
 	public SymmetricKeyCipher()
 	{
@@ -71,197 +57,40 @@ public final class SymmetricKeyCipher extends JPanel
 		final GridBagLayout gridBagLayout = new GridBagLayout();
 		gridBagLayout.columnWidths = new int[]
 		{
-				0, 0, 0
+				0, 0, 0, 0
 		};
 		gridBagLayout.rowHeights = new int[]
 		{
-				0, 0, 0, 0, 0, 0, 0
+				0, 0, 0, 0, 0, 0
 		};
 		gridBagLayout.columnWeights = new double[]
 		{
-				0.0, 1.0, 0.0
+				0.0, 1.0, 1.0, 0.0
 		};
 		gridBagLayout.rowWeights = new double[]
 		{
-				0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0
+				0.0, 0.0, 0.0, 0.0, 0.0, 1.0
 		};
 		setLayout(gridBagLayout);
 
 		// Encrypt button
 		final JButton encryptButton = new JButton("Encrypt");
 
-		final JPanel plainPanel = new JPanel();
-		plainPanel.setBorder(new TitledBorder(null, "Plain(Decrypted) message", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		plainTextPanel = new EncodedIOPanel("Plain-text", Encoding.UTF_8);
 		final GridBagConstraints gbc_plainPanel = new GridBagConstraints();
-		gbc_plainPanel.gridwidth = 3;
-		gbc_plainPanel.insets = new Insets(0, 0, 5, 5);
+		gbc_plainPanel.gridwidth = 4;
+		gbc_plainPanel.insets = new Insets(0, 0, 5, 0);
 		gbc_plainPanel.fill = GridBagConstraints.BOTH;
 		gbc_plainPanel.gridx = 0;
 		gbc_plainPanel.gridy = 0;
-		add(plainPanel, gbc_plainPanel);
-		final GridBagLayout gbl_plainPanel = new GridBagLayout();
-		gbl_plainPanel.columnWidths = new int[]
-		{
-				0, 0
-		};
-		gbl_plainPanel.rowHeights = new int[]
-		{
-				0, 0, 0
-		};
-		gbl_plainPanel.columnWeights = new double[]
-		{
-				1.0, Double.MIN_VALUE
-		};
-		gbl_plainPanel.rowWeights = new double[]
-		{
-				0.0, 1.0, Double.MIN_VALUE
-		};
-		plainPanel.setLayout(gbl_plainPanel);
-
-		// Plain-text/Decrypted-text field panel
-		final JPanel plainTextFieldPanel = new JPanel();
-		final GridBagConstraints gbc_plainTextFieldPanel = new GridBagConstraints();
-		gbc_plainTextFieldPanel.insets = new Insets(0, 0, 5, 0);
-		gbc_plainTextFieldPanel.anchor = GridBagConstraints.PAGE_START;
-		gbc_plainTextFieldPanel.fill = GridBagConstraints.HORIZONTAL;
-		gbc_plainTextFieldPanel.gridx = 0;
-		gbc_plainTextFieldPanel.gridy = 0;
-		plainPanel.add(plainTextFieldPanel, gbc_plainTextFieldPanel);
-		plainTextFieldPanel.setBorder(new TitledBorder(null, "Plain-text (Decrypted-text)", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-		final GridBagLayout gbl_plainTextFieldPanel = new GridBagLayout();
-		gbl_plainTextFieldPanel.columnWidths = new int[]
-		{
-				0, 0, 0
-		};
-		gbl_plainTextFieldPanel.rowHeights = new int[]
-		{
-				0, 0, 0
-		};
-		gbl_plainTextFieldPanel.columnWeights = new double[]
-		{
-				0.0, 1.0, Double.MIN_VALUE
-		};
-		gbl_plainTextFieldPanel.rowWeights = new double[]
-		{
-				0.0, 1.0, Double.MIN_VALUE
-		};
-		plainTextFieldPanel.setLayout(gbl_plainTextFieldPanel);
-
-		// Plain-text/Decrypted-text field panel - Charset panel
-		final JPanel plainTextCharsetPanel = new JPanel();
-		final GridBagConstraints gbc_plainTextCharsetPanel = new GridBagConstraints();
-		gbc_plainTextCharsetPanel.fill = GridBagConstraints.HORIZONTAL;
-		gbc_plainTextCharsetPanel.insets = new Insets(0, 0, 5, 0);
-		gbc_plainTextCharsetPanel.anchor = GridBagConstraints.PAGE_START;
-		gbc_plainTextCharsetPanel.gridx = 1;
-		gbc_plainTextCharsetPanel.gridy = 0;
-		plainTextFieldPanel.add(plainTextCharsetPanel, gbc_plainTextCharsetPanel);
-		plainTextCharsetPanel.setBorder(new TitledBorder(null, "Charset", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-		final GridBagLayout gbl_plainTextCharsetPanel = new GridBagLayout();
-		gbl_plainTextCharsetPanel.columnWidths = new int[]
-		{
-				0, 0
-		};
-		gbl_plainTextCharsetPanel.rowHeights = new int[]
-		{
-				0, 0
-		};
-		gbl_plainTextCharsetPanel.columnWeights = new double[]
-		{
-				1.0, Double.MIN_VALUE
-		};
-		gbl_plainTextCharsetPanel.rowWeights = new double[]
-		{
-				0.0, Double.MIN_VALUE
-		};
-		plainTextCharsetPanel.setLayout(gbl_plainTextCharsetPanel);
-
-		// Plain-text/Decrypted-text field panel - Charset panel - Charset combo box
-		plainTextCharsetCB = new JComboBox<>();
-		final GridBagConstraints gbc_plainTextCharsetCB = new GridBagConstraints();
-		gbc_plainTextCharsetCB.fill = GridBagConstraints.HORIZONTAL;
-		gbc_plainTextCharsetCB.gridx = 0;
-		gbc_plainTextCharsetCB.gridy = 0;
-		plainTextCharsetPanel.add(plainTextCharsetCB, gbc_plainTextCharsetCB);
-
-		plainFromToTextButton = new JRadioButton("Input the message from the text field / Output the decrypted-message to the text field");
-		final GridBagConstraints gbc_plainFromToTextButton = new GridBagConstraints();
-		gbc_plainFromToTextButton.gridheight = 2;
-		gbc_plainFromToTextButton.insets = new Insets(0, 0, 0, 5);
-		gbc_plainFromToTextButton.gridx = 0;
-		gbc_plainFromToTextButton.gridy = 0;
-		plainTextFieldPanel.add(plainFromToTextButton, gbc_plainFromToTextButton);
-
-		// Plain-text/Decrypted-text field panel - Plain-text/Decrypted-text field scroll pane
-		final JScrollPane encryptPlainTextFieldScrollPane = new JScrollPane();
-		final GridBagConstraints gbc_plainTextFieldScrollPane = new GridBagConstraints();
-		gbc_plainTextFieldScrollPane.ipady = 40;
-		gbc_plainTextFieldScrollPane.fill = GridBagConstraints.BOTH;
-		gbc_plainTextFieldScrollPane.gridx = 1;
-		gbc_plainTextFieldScrollPane.gridy = 1;
-		plainTextFieldPanel.add(encryptPlainTextFieldScrollPane, gbc_plainTextFieldScrollPane);
-
-		// Plain-text/Decrypted-text field panel - Plain-text/Decrypted-text field scroll pane - Plain-text/Decrypted-text field
-		plainTextField = new JTextPane();
-		encryptPlainTextFieldScrollPane.setViewportView(plainTextField);
-
-		final JPanel plainFilePanel = new JPanel();
-		plainFilePanel.setBorder(new TitledBorder(null, "Plain-file (Decrypted-file)", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
-		final GridBagConstraints gbc_plainFilePanel = new GridBagConstraints();
-		gbc_plainFilePanel.fill = GridBagConstraints.BOTH;
-		gbc_plainFilePanel.gridx = 0;
-		gbc_plainFilePanel.gridy = 1;
-		plainPanel.add(plainFilePanel, gbc_plainFilePanel);
-		final GridBagLayout gbl_plainFilePanel = new GridBagLayout();
-		gbl_plainFilePanel.columnWidths = new int[]
-		{
-				0, 0, 0, 0
-		};
-		gbl_plainFilePanel.rowHeights = new int[]
-		{
-				0, 0
-		};
-		gbl_plainFilePanel.columnWeights = new double[]
-		{
-				0.0, 1.0, 0.0, Double.MIN_VALUE
-		};
-		gbl_plainFilePanel.rowWeights = new double[]
-		{
-				0.0, Double.MIN_VALUE
-		};
-		plainFilePanel.setLayout(gbl_plainFilePanel);
-
-		plainFromToFileButton = new JRadioButton("Input the message from the file / Output the decrypted-message to the file");
-		final GridBagConstraints gbc_plainFromToFileButton = new GridBagConstraints();
-		gbc_plainFromToFileButton.insets = new Insets(0, 0, 0, 5);
-		gbc_plainFromToFileButton.gridx = 0;
-		gbc_plainFromToFileButton.gridy = 0;
-		plainFilePanel.add(plainFromToFileButton, gbc_plainFromToFileButton);
-
-		plainFileField = new JTextField();
-		plainFileField.setEnabled(false);
-		plainFileField.setColumns(10);
-		final GridBagConstraints gbc_plainFileField = new GridBagConstraints();
-		gbc_plainFileField.fill = GridBagConstraints.HORIZONTAL;
-		gbc_plainFileField.insets = new Insets(0, 0, 0, 5);
-		gbc_plainFileField.gridx = 1;
-		gbc_plainFileField.gridy = 0;
-		plainFilePanel.add(plainFileField, gbc_plainFileField);
-
-		final JButton plainFileFindButton = new JButton("Find");
-		plainFileFindButton.setEnabled(false);
-		final GridBagConstraints gbc_plainFileFindButton = new GridBagConstraints();
-		gbc_plainFileFindButton.anchor = GridBagConstraints.FIRST_LINE_START;
-		gbc_plainFileFindButton.gridx = 2;
-		gbc_plainFileFindButton.gridy = 0;
-		plainFilePanel.add(plainFileFindButton, gbc_plainFileFindButton);
+		add(plainTextPanel, gbc_plainPanel);
 
 		// Cipher settings panel
 		final JPanel cipherSettingsPanel = new JPanel();
 		cipherSettingsPanel.setBorder(new TitledBorder(null, "Cipher settings", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		final GridBagConstraints gbc_cipherSettingsPanel = new GridBagConstraints();
-		gbc_cipherSettingsPanel.gridwidth = 3;
-		gbc_cipherSettingsPanel.insets = new Insets(0, 0, 5, 5);
+		gbc_cipherSettingsPanel.gridwidth = 4;
+		gbc_cipherSettingsPanel.insets = new Insets(0, 0, 5, 0);
 		gbc_cipherSettingsPanel.fill = GridBagConstraints.BOTH;
 		gbc_cipherSettingsPanel.gridx = 0;
 		gbc_cipherSettingsPanel.gridy = 1;
@@ -408,197 +237,47 @@ public final class SymmetricKeyCipher extends JPanel
 		gbc_cipherOperationModeCB.gridy = 0;
 		cipherAlgorithmModePanel.add(cipherAlgorithmModeCB, gbc_cipherOperationModeCB);
 		final GridBagConstraints gbc_encryptButton = new GridBagConstraints();
-		gbc_encryptButton.gridheight = 3;
 		gbc_encryptButton.insets = new Insets(0, 0, 5, 5);
 		gbc_encryptButton.gridx = 0;
 		gbc_encryptButton.gridy = 2;
 		add(encryptButton, gbc_encryptButton);
 
 		// Key-text field panel
-		final JPanel keyTextFieldPanel = new JPanel();
-		keyTextFieldPanel.setBorder(new TitledBorder(null, "Encryption/Decryption key", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		keyPanel = new EncodedIOPanel("Cipher Key", Encoding.UTF_8);
 		final GridBagConstraints gbc_keyTextFieldPanel = new GridBagConstraints();
 		gbc_keyTextFieldPanel.insets = new Insets(10, 0, 5, 5);
 		gbc_keyTextFieldPanel.fill = GridBagConstraints.BOTH;
 		gbc_keyTextFieldPanel.gridx = 1;
 		gbc_keyTextFieldPanel.gridy = 2;
-		add(keyTextFieldPanel, gbc_keyTextFieldPanel);
-		final GridBagLayout gbl_keyTextFieldPanel = new GridBagLayout();
-		gbl_keyTextFieldPanel.columnWidths = new int[]
-		{
-				0, 0
-		};
-		gbl_keyTextFieldPanel.rowHeights = new int[]
-		{
-				0, 0, 0
-		};
-		gbl_keyTextFieldPanel.columnWeights = new double[]
-		{
-				1.0, Double.MIN_VALUE
-		};
-		gbl_keyTextFieldPanel.rowWeights = new double[]
-		{
-				1.0, 0.0, Double.MIN_VALUE
-		};
-		keyTextFieldPanel.setLayout(gbl_keyTextFieldPanel);
-
-		// Key-text field panel - Key-text field
-		keyTextField = new JTextField();
-		final GridBagConstraints gbc_keyTextField = new GridBagConstraints();
-		gbc_keyTextField.insets = new Insets(0, 0, 5, 5);
-		gbc_keyTextField.fill = GridBagConstraints.HORIZONTAL;
-		gbc_keyTextField.gridx = 0;
-		gbc_keyTextField.gridy = 0;
-		keyTextFieldPanel.add(keyTextField, gbc_keyTextField);
-
-		// Key-text field panel - 'Actual key text' label
-		keyTextActualLabel = new JLabel("");
-		keyTextActualLabel.setLabelFor(keyTextField);
-		keyTextActualLabel.setEnabled(false);
-		final GridBagConstraints gbc_keyTextActualLabel = new GridBagConstraints();
-		gbc_keyTextActualLabel.anchor = GridBagConstraints.LINE_START;
-		gbc_keyTextActualLabel.insets = new Insets(0, 0, 0, 5);
-		gbc_keyTextActualLabel.gridx = 0;
-		gbc_keyTextActualLabel.gridy = 1;
-		keyTextFieldPanel.add(keyTextActualLabel, gbc_keyTextActualLabel);
-
-		// Key-text field panel - Charset panel
-		final JPanel keyTextCharsetPanel = new JPanel();
-		final GridBagConstraints gbc_keyTextCharsetPanel = new GridBagConstraints();
-		gbc_keyTextCharsetPanel.insets = new Insets(0, 0, 5, 0);
-		gbc_keyTextCharsetPanel.anchor = GridBagConstraints.PAGE_START;
-		gbc_keyTextCharsetPanel.gridx = 1;
-		gbc_keyTextCharsetPanel.gridy = 0;
-		keyTextFieldPanel.add(keyTextCharsetPanel, gbc_keyTextCharsetPanel);
-		keyTextCharsetPanel.setBorder(new TitledBorder(null, "Charset", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-		final GridBagLayout gbl_keyTextCharsetPanel = new GridBagLayout();
-		gbl_keyTextCharsetPanel.columnWidths = new int[]
-		{
-				0, 0
-		};
-		gbl_keyTextCharsetPanel.rowHeights = new int[]
-		{
-				0, 0
-		};
-		gbl_keyTextCharsetPanel.columnWeights = new double[]
-		{
-				1.0, Double.MIN_VALUE
-		};
-		gbl_keyTextCharsetPanel.rowWeights = new double[]
-		{
-				0.0, Double.MIN_VALUE
-		};
-		keyTextCharsetPanel.setLayout(gbl_keyTextCharsetPanel);
-
-		// Key-text field panel - Charset panel - Charset combo box
-		keyTextCharsetCB = new JComboBox<>();
-		final GridBagConstraints gbc_keyTextCharsetCB = new GridBagConstraints();
-		gbc_keyTextCharsetCB.fill = GridBagConstraints.HORIZONTAL;
-		gbc_keyTextCharsetCB.gridx = 0;
-		gbc_keyTextCharsetCB.gridy = 0;
-		keyTextCharsetPanel.add(keyTextCharsetCB, gbc_keyTextCharsetCB);
+		add(keyPanel, gbc_keyTextFieldPanel);
 
 		// Decrypt button
 		final JButton decryptButton = new JButton("Decrypt");
 		final GridBagConstraints gbc_decryptButton = new GridBagConstraints();
-		gbc_decryptButton.gridheight = 3;
+		gbc_decryptButton.gridheight = 2;
 		gbc_decryptButton.insets = new Insets(0, 0, 5, 0);
-		gbc_decryptButton.gridx = 2;
+		gbc_decryptButton.gridx = 3;
 		gbc_decryptButton.gridy = 2;
 		add(decryptButton, gbc_decryptButton);
 
 		// IV-text/Counter-text field panel
-		final JPanel ivTextFieldPanel = new JPanel();
-		ivTextFieldPanel.setBorder(new TitledBorder(null, "Encryption/Decryption IV(Initial Vector)", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		ivPanel = new EncodedIOPanel("Cipher Initial Vector", Encoding.UTF_8);
 		final GridBagConstraints gbc_ivTextFieldPanel = new GridBagConstraints();
 		gbc_ivTextFieldPanel.insets = new Insets(0, 0, 5, 5);
 		gbc_ivTextFieldPanel.fill = GridBagConstraints.BOTH;
-		gbc_ivTextFieldPanel.gridx = 1;
-		gbc_ivTextFieldPanel.gridy = 3;
-		add(ivTextFieldPanel, gbc_ivTextFieldPanel);
-		final GridBagLayout gbl_ivTextFieldPanel = new GridBagLayout();
-		gbl_ivTextFieldPanel.columnWidths = new int[]
-		{
-				0, 0
-		};
-		gbl_ivTextFieldPanel.rowHeights = new int[]
-		{
-				0, 0, 0
-		};
-		gbl_ivTextFieldPanel.columnWeights = new double[]
-		{
-				1.0, Double.MIN_VALUE
-		};
-		gbl_ivTextFieldPanel.rowWeights = new double[]
-		{
-				1.0, 0.0, Double.MIN_VALUE
-		};
-		ivTextFieldPanel.setLayout(gbl_ivTextFieldPanel);
-
-		// IV-text/Counter-text field panel - IV-text/Counter-text field
-		ivTextField = new JTextField();
-		final GridBagConstraints gbc_ivTextField = new GridBagConstraints();
-		gbc_ivTextField.insets = new Insets(0, 0, 5, 5);
-		gbc_ivTextField.fill = GridBagConstraints.HORIZONTAL;
-		gbc_ivTextField.gridx = 0;
-		gbc_ivTextField.gridy = 0;
-		ivTextFieldPanel.add(ivTextField, gbc_ivTextField);
-
-		// IV-text/Counter-text field panel - 'Actual IV-text/Counter-text' field
-		ivTextActualLabel = new JLabel("");
-		ivTextActualLabel.setLabelFor(ivTextField);
-		ivTextActualLabel.setEnabled(false);
-		final GridBagConstraints gbc_ivTextActualLabel = new GridBagConstraints();
-		gbc_ivTextActualLabel.anchor = GridBagConstraints.LINE_START;
-		gbc_ivTextActualLabel.insets = new Insets(0, 0, 0, 5);
-		gbc_ivTextActualLabel.gridx = 0;
-		gbc_ivTextActualLabel.gridy = 1;
-		ivTextFieldPanel.add(ivTextActualLabel, gbc_ivTextActualLabel);
-
-		// Plain-text/Decrypted-text field panel - Charset panel
-		final JPanel ivTextCharsetPanel = new JPanel();
-		final GridBagConstraints gbc_ivTextCharsetPanel = new GridBagConstraints();
-		gbc_ivTextCharsetPanel.insets = new Insets(0, 0, 5, 0);
-		gbc_ivTextCharsetPanel.anchor = GridBagConstraints.PAGE_START;
-		gbc_ivTextCharsetPanel.gridx = 1;
-		gbc_ivTextCharsetPanel.gridy = 0;
-		ivTextFieldPanel.add(ivTextCharsetPanel, gbc_ivTextCharsetPanel);
-		ivTextCharsetPanel.setBorder(new TitledBorder(null, "Charset", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-		final GridBagLayout gbl_ivTextCharsetPanel = new GridBagLayout();
-		gbl_ivTextCharsetPanel.columnWidths = new int[]
-		{
-				0, 0
-		};
-		gbl_ivTextCharsetPanel.rowHeights = new int[]
-		{
-				0, 0
-		};
-		gbl_ivTextCharsetPanel.columnWeights = new double[]
-		{
-				1.0, Double.MIN_VALUE
-		};
-		gbl_ivTextCharsetPanel.rowWeights = new double[]
-		{
-				0.0, Double.MIN_VALUE
-		};
-		ivTextCharsetPanel.setLayout(gbl_ivTextCharsetPanel);
-
-		// Plain-text/Decrypted-text field panel - Charset panel - Charset combo box
-		ivTextCharsetCB = new JComboBox<>();
-		final GridBagConstraints gbc_ivTextCharsetCB = new GridBagConstraints();
-		gbc_ivTextCharsetCB.fill = GridBagConstraints.HORIZONTAL;
-		gbc_ivTextCharsetCB.gridx = 0;
-		gbc_ivTextCharsetCB.gridy = 0;
-		ivTextCharsetPanel.add(ivTextCharsetCB, gbc_ivTextCharsetCB);
+		gbc_ivTextFieldPanel.gridx = 2;
+		gbc_ivTextFieldPanel.gridy = 2;
+		add(ivPanel, gbc_ivTextFieldPanel);
 
 		// Padding character field panel
 		final JPanel paddingCharFieldPanel = new JPanel();
 		paddingCharFieldPanel.setBorder(new TitledBorder(UIManager.getBorder("TitledBorder.border"), "Key, IV (and Plain-text if cipher padding mode is None) Padding-character", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
 		final GridBagConstraints gbc_paddingCharFieldPanel = new GridBagConstraints();
+		gbc_paddingCharFieldPanel.gridwidth = 2;
 		gbc_paddingCharFieldPanel.insets = new Insets(0, 0, 10, 5);
 		gbc_paddingCharFieldPanel.fill = GridBagConstraints.BOTH;
 		gbc_paddingCharFieldPanel.gridx = 1;
-		gbc_paddingCharFieldPanel.gridy = 4;
+		gbc_paddingCharFieldPanel.gridy = 3;
 		add(paddingCharFieldPanel, gbc_paddingCharFieldPanel);
 		final GridBagLayout gbl_paddingCharFieldPanel = new GridBagLayout();
 		gbl_paddingCharFieldPanel.columnWidths = new int[]
@@ -630,156 +309,19 @@ public final class SymmetricKeyCipher extends JPanel
 		paddingCharFieldPanel.add(paddingCharField, gbc_paddingCharField);
 		paddingCharField.setColumns(10);
 
-		final JPanel encryptedPanel = new JPanel();
-		encryptedPanel.setBorder(new TitledBorder(null, "Encrypted message", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		paddingCharField.setDocument(new PlainDocumentWithLimit());
+		((PlainDocumentWithLimit) paddingCharField.getDocument()).setLimit(1);
+		paddingCharField.setText("+");
+
+		cipherTextPanel = new EncodedIOPanel("Cipher-text", Encoding.BASE64);
+		cipherTextPanel.setBorder(new TitledBorder(null, "Encrypted message", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		final GridBagConstraints gbc_encryptedPanel = new GridBagConstraints();
-		gbc_encryptedPanel.gridwidth = 3;
-		gbc_encryptedPanel.insets = new Insets(0, 0, 5, 5);
+		gbc_encryptedPanel.gridwidth = 4;
+		gbc_encryptedPanel.insets = new Insets(0, 0, 5, 0);
 		gbc_encryptedPanel.fill = GridBagConstraints.BOTH;
 		gbc_encryptedPanel.gridx = 0;
-		gbc_encryptedPanel.gridy = 5;
-		add(encryptedPanel, gbc_encryptedPanel);
-		final GridBagLayout gbl_encryptedPanel = new GridBagLayout();
-		gbl_encryptedPanel.columnWidths = new int[]
-		{
-				0, 0
-		};
-		gbl_encryptedPanel.rowHeights = new int[]
-		{
-				0, 0, 0, 0
-		};
-		gbl_encryptedPanel.columnWeights = new double[]
-		{
-				1.0, Double.MIN_VALUE
-		};
-		gbl_encryptedPanel.rowWeights = new double[]
-		{
-				0.0, 0.0, 0.0, Double.MIN_VALUE
-		};
-		encryptedPanel.setLayout(gbl_encryptedPanel);
-
-		// Base64-encode encrypted-text
-		base64EncryptedText = new JCheckBox("Base64 encode/decode Encrypted-text");
-		final GridBagConstraints gbc_base64EncryptedText = new GridBagConstraints();
-		gbc_base64EncryptedText.anchor = GridBagConstraints.FIRST_LINE_START;
-		gbc_base64EncryptedText.insets = new Insets(0, 0, 5, 0);
-		gbc_base64EncryptedText.gridx = 0;
-		gbc_base64EncryptedText.gridy = 0;
-		encryptedPanel.add(base64EncryptedText, gbc_base64EncryptedText);
-
-		// Encrypted-text field panel
-		final JPanel encryptedTextFieldPanel = new JPanel();
-		final GridBagConstraints gbc_encryptedTextFieldPanel = new GridBagConstraints();
-		gbc_encryptedTextFieldPanel.insets = new Insets(0, 0, 5, 0);
-		gbc_encryptedTextFieldPanel.anchor = GridBagConstraints.PAGE_START;
-		gbc_encryptedTextFieldPanel.fill = GridBagConstraints.HORIZONTAL;
-		gbc_encryptedTextFieldPanel.gridx = 0;
-		gbc_encryptedTextFieldPanel.gridy = 1;
-		encryptedPanel.add(encryptedTextFieldPanel, gbc_encryptedTextFieldPanel);
-		encryptedTextFieldPanel.setBorder(new TitledBorder(null, "Encrypted-text", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-		final GridBagLayout gbl_encryptedTextFieldPanel = new GridBagLayout();
-		gbl_encryptedTextFieldPanel.columnWidths = new int[]
-		{
-				0, 0, 0
-		};
-		gbl_encryptedTextFieldPanel.rowHeights = new int[]
-		{
-				0, 0, 0, 0
-		};
-		gbl_encryptedTextFieldPanel.columnWeights = new double[]
-		{
-				0.0, 1.0, Double.MIN_VALUE
-		};
-		gbl_encryptedTextFieldPanel.rowWeights = new double[]
-		{
-				0.0, 0.0, 0.0, Double.MIN_VALUE
-		};
-		encryptedTextFieldPanel.setLayout(gbl_encryptedTextFieldPanel);
-
-		final JRadioButton encryptedFromToTextButton = new JRadioButton("Input/Output the encrypted-message from/to the text field");
-		final GridBagConstraints gbc_encryptedFromToTextButton = new GridBagConstraints();
-		gbc_encryptedFromToTextButton.gridheight = 3;
-		gbc_encryptedFromToTextButton.insets = new Insets(0, 0, 5, 5);
-		gbc_encryptedFromToTextButton.gridx = 0;
-		gbc_encryptedFromToTextButton.gridy = 0;
-		encryptedTextFieldPanel.add(encryptedFromToTextButton, gbc_encryptedFromToTextButton);
-
-		// Encrypted-text field panel - Encrypted-text field scroll pane
-		final JScrollPane encryptedTextFieldScrollPane = new JScrollPane();
-		final GridBagConstraints gbc_encryptedTextFieldScrollPane = new GridBagConstraints();
-		gbc_encryptedTextFieldScrollPane.gridheight = 2;
-		gbc_encryptedTextFieldScrollPane.insets = new Insets(0, 0, 5, 0);
-		gbc_encryptedTextFieldScrollPane.ipady = 40;
-		gbc_encryptedTextFieldScrollPane.fill = GridBagConstraints.BOTH;
-		gbc_encryptedTextFieldScrollPane.gridx = 1;
-		gbc_encryptedTextFieldScrollPane.gridy = 0;
-		encryptedTextFieldPanel.add(encryptedTextFieldScrollPane, gbc_encryptedTextFieldScrollPane);
-
-		// Encrypted-text field panel - Encrypted-text field scroll pane - Encrypted-text field
-		encryptedTextField = new JTextPane();
-		encryptedTextFieldScrollPane.setViewportView(encryptedTextField);
-
-		// Base64-encode encrypted-text - note
-		final JLabel base64EncryptedTextNote = new JLabel("Note that the charset of RAW(Not base64-encoded) encrypted-text is always ISO-8859-1 (a.k.a. ISO-LATIN-1)");
-		base64EncryptedTextNote.setEnabled(false);
-		base64EncryptedTextNote.setVisible(false);
-		base64EncryptedTextNote.setToolTipText("Because other charsets (UTF-8, UTF-16, etc.) are non-compatible with the RAW(Not base64-encoded) encrypted-text.");
-		final GridBagConstraints gbc_base64EncryptedTextNote = new GridBagConstraints();
-		gbc_base64EncryptedTextNote.anchor = GridBagConstraints.PAGE_START;
-		gbc_base64EncryptedTextNote.gridx = 1;
-		gbc_base64EncryptedTextNote.gridy = 2;
-		encryptedTextFieldPanel.add(base64EncryptedTextNote, gbc_base64EncryptedTextNote);
-
-		final JPanel encryptedFilePanel = new JPanel();
-		encryptedFilePanel.setBorder(new TitledBorder(null, "Encrypted-file", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
-		final GridBagConstraints gbc_encryptedFilePanel = new GridBagConstraints();
-		gbc_encryptedFilePanel.anchor = GridBagConstraints.PAGE_START;
-		gbc_encryptedFilePanel.fill = GridBagConstraints.HORIZONTAL;
-		gbc_encryptedFilePanel.gridx = 0;
-		gbc_encryptedFilePanel.gridy = 2;
-		encryptedPanel.add(encryptedFilePanel, gbc_encryptedFilePanel);
-		final GridBagLayout gbl_encryptedFilePanel = new GridBagLayout();
-		gbl_encryptedFilePanel.columnWidths = new int[]
-		{
-				0, 0, 0, 0
-		};
-		gbl_encryptedFilePanel.rowHeights = new int[]
-		{
-				0, 0
-		};
-		gbl_encryptedFilePanel.columnWeights = new double[]
-		{
-				0.0, 1.0, 0.0, Double.MIN_VALUE
-		};
-		gbl_encryptedFilePanel.rowWeights = new double[]
-		{
-				0.0, Double.MIN_VALUE
-		};
-		encryptedFilePanel.setLayout(gbl_encryptedFilePanel);
-
-		encryptedFromToFileButton = new JRadioButton("Input/Output the encrypted-message from/to the file");
-		final GridBagConstraints gbc_encryptedFromToFileButton = new GridBagConstraints();
-		gbc_encryptedFromToFileButton.insets = new Insets(0, 0, 0, 5);
-		gbc_encryptedFromToFileButton.gridx = 0;
-		gbc_encryptedFromToFileButton.gridy = 0;
-		encryptedFilePanel.add(encryptedFromToFileButton, gbc_encryptedFromToFileButton);
-
-		encryptedFileField = new JTextField();
-		encryptedFileField.setEnabled(false);
-		encryptedFileField.setColumns(10);
-		final GridBagConstraints gbc_encryptedFileField = new GridBagConstraints();
-		gbc_encryptedFileField.fill = GridBagConstraints.HORIZONTAL;
-		gbc_encryptedFileField.insets = new Insets(0, 0, 0, 5);
-		gbc_encryptedFileField.gridx = 1;
-		gbc_encryptedFileField.gridy = 0;
-		encryptedFilePanel.add(encryptedFileField, gbc_encryptedFileField);
-
-		final JButton encryptedFileFindButton = new JButton("Find");
-		encryptedFileFindButton.setEnabled(false);
-		final GridBagConstraints gbc_encryptedFileFindButton = new GridBagConstraints();
-		gbc_encryptedFileFindButton.gridx = 2;
-		gbc_encryptedFileFindButton.gridy = 0;
-		encryptedFilePanel.add(encryptedFileFindButton, gbc_encryptedFileFindButton);
+		gbc_encryptedPanel.gridy = 4;
+		add(cipherTextPanel, gbc_encryptedPanel);
 
 		// Cipher settings panel - Cipher algorithm clamp panel
 		final JPanel cipherAlgorithmPaddingPanel = new JPanel();
@@ -856,10 +398,6 @@ public final class SymmetricKeyCipher extends JPanel
 		gbc_cipherAlgorithmModeCFBOFBUnitBytesCB.gridx = 0;
 		gbc_cipherAlgorithmModeCFBOFBUnitBytesCB.gridy = 0;
 		cipherAlgorithmModeCFBOFBUnitBytesPanel.add(cipherAlgorithmModeCFBOFBUnitBytesCB, gbc_cipherAlgorithmModeCFBOFBUnitBytesCB);
-
-		base64EncryptedText.setSelected(true);
-		plainFromToTextButton.setSelected(true);
-		encryptedFromToTextButton.setSelected(true);
 
 		gost28147SBoxPanel = new JPanel();
 		gost28147SBoxPanel.setEnabled(false);
@@ -1015,36 +553,12 @@ public final class SymmetricKeyCipher extends JPanel
 		gbc_cipherAlgorithmModeAEADTagLenCB.gridx = 0;
 		gbc_cipherAlgorithmModeAEADTagLenCB.gridy = 0;
 		cipherAlgorithmModeAEADTagLenPanel.add(cipherAlgorithmModeAEADTagLenCB, gbc_cipherAlgorithmModeAEADTagLenCB);
-		// </editor-fold>
-
-		// <editor-fold desc="List, ComboBox models">
-		// Plain-text charset combo box model
-		plainTextCharsetCB.setModel(new DefaultComboBoxModel<>(Encoding.values()));
-		plainTextCharsetCB.setSelectedItem(Encoding.UTF_8); // UTF-8 is default charset
-
-		// Key-text charset combo box model
-		keyTextCharsetCB.setModel(new DefaultComboBoxModel<>(Encoding.values()));
-		keyTextCharsetCB.setSelectedItem(Encoding.UTF_8); // UTF-8 is default charset
-
-		// IV/Counter-text charset combo box model
-		ivTextCharsetCB.setModel(new DefaultComboBoxModel<>(Encoding.values()));
-		ivTextCharsetCB.setSelectedItem(Encoding.UTF_8); // UTF-8 is default charset
 
 		keySizeCB.setModel(new DefaultComboBoxModel<>(new Integer[]
 		{
 				128, 192, 256
 		}));
 		keySizeCB.setSelectedIndex(0);
-
-		keyTextField.setDocument(new PlainDocumentWithLimit());
-		((PlainDocumentWithLimit) keyTextField.getDocument()).setLimit(16); // 128 bits = 16 bytes
-
-		ivTextField.setDocument(new PlainDocumentWithLimit());
-		((PlainDocumentWithLimit) ivTextField.getDocument()).setLimit(16); // 128 bits = 16 bytes
-
-		paddingCharField.setDocument(new PlainDocumentWithLimit());
-		((PlainDocumentWithLimit) paddingCharField.getDocument()).setLimit(1);
-		paddingCharField.setText("+");
 
 		cipherAlgorithmCB.setModel(new DefaultComboBoxModel<>(CipherAlgorithm.values()));
 		cipherAlgorithmCB.setSelectedItem(CipherAlgorithm.AES);
@@ -1085,31 +599,15 @@ public final class SymmetricKeyCipher extends JPanel
 		}));
 		// </editor-fold>
 
-		// <editor-fold desc="ButtonGroups">
-		final ButtonGroup plainModeButtonGroup = new ButtonGroup();
-		plainModeButtonGroup.add(plainFromToTextButton);
-		plainModeButtonGroup.add(plainFromToFileButton);
-
-		final ButtonGroup encryptedModeButtonGroup = new ButtonGroup();
-		encryptedModeButtonGroup.add(encryptedFromToTextButton);
-		encryptedModeButtonGroup.add(encryptedFromToFileButton);
-		// </editor-fold>
-
-		// <editor-fold desc="Lambdas">
-		base64EncryptedText.addActionListener(e -> base64EncryptedTextNote.setVisible(!base64EncryptedText.isSelected()));
-
 		keySizeCB.addActionListener(e ->
 		{
 			final CipherAlgorithm algorithm = Optional.ofNullable((CipherAlgorithm) cipherAlgorithmCB.getSelectedItem()).orElse(CipherAlgorithm.AES);
-			final String key = keyTextField.getText();
 
 			int keySize = (int) Optional.ofNullable(keySizeCB.getSelectedItem()).orElse(256);
 			if (algorithm.getMaxKeySize() != -1)
 				keySize = algorithm.getMaxKeySize();
 
-			((PlainDocumentWithLimit) keyTextField.getDocument()).setLimit(keySize / 8);
-			keyTextField.updateUI();
-			keyTextField.setText(key);
+			keyPanel.setTextLimit(keySize / 8);
 		});
 
 		cipherAlgorithmCB.addActionListener(e ->
@@ -1125,8 +623,7 @@ public final class SymmetricKeyCipher extends JPanel
 
 			// Check the cipher mode is using IV while encryption/decryption
 			final boolean usingIV = cipherMode.isUsingIV() || newAlgorithm.isStreamCipher();
-			ivTextFieldPanel.setEnabled(usingIV);
-			ivTextField.setEnabled(usingIV);
+			ivPanel.setEnabled(usingIV);
 
 			cipherAlgorithmPaddingCB.setModel(new DefaultComboBoxModel<>(newAlgorithm.getSupportedPaddings()));
 			cipherAlgorithmPaddingCB.updateUI();
@@ -1149,11 +646,7 @@ public final class SymmetricKeyCipher extends JPanel
 				keySizeBytes = (int) keySizeCB.getSelectedItem();
 			if (newAlgorithm.getMaxKeySize() != -1)
 				keySizeBytes = newAlgorithm.getMaxKeySize();
-			final String key = keyTextField.getText();
-//			if (keySizeBytes != -1)
-			((PlainDocumentWithLimit) keyTextField.getDocument()).setLimit(keySizeBytes / 8);
-			keyTextField.updateUI();
-			keyTextField.setText(key);
+			keyPanel.setTextLimit(keySizeBytes / 8);
 
 			final boolean isCFBorOFB = cipherMode == CipherMode.CFB || cipherMode == CipherMode.OFB;
 			cipherAlgorithmModeCFBOFBUnitBytesPanel.setEnabled(isCFBorOFB);
@@ -1222,7 +715,7 @@ public final class SymmetricKeyCipher extends JPanel
 					if (doSaveEncryptedBytes(doEncrypt(getPlainBytes())))
 						Main.notificationMessageBox("Successfully encrypted!", "Successfully encrypted the plain message!", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null);
 				}
-				catch (final Throwable ex)
+				catch (final CipherException ex)
 				{
 					Main.exceptionMessageBox("Exception while encryption", "An exception occurred while encryption.", ex);
 				}
@@ -1253,7 +746,7 @@ public final class SymmetricKeyCipher extends JPanel
 					if (doSavePlainBytes(doDecrypt(getEncryptedBytes())))
 						Main.notificationMessageBox("Successfully decrypted!", "Successfully decrypted the plain message!", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null);
 				}
-				catch (final InterruptedException | ExecutionException | CipherException ex)
+				catch (final CipherException ex)
 				{
 					Main.exceptionMessageBox("Exception while decryption", "An exception occurred while decryption.", ex);
 				}
@@ -1277,11 +770,10 @@ public final class SymmetricKeyCipher extends JPanel
 
 			// Check the cipher mode is using IV while encryption/decryption
 			final boolean usingIV = cipherMode.isUsingIV() || cipherAlgorithm.isStreamCipher();
-			ivTextFieldPanel.setEnabled(usingIV);
-			ivTextField.setEnabled(usingIV);
+			ivPanel.setEnabled(usingIV);
 
-			((TitledBorder) ivTextFieldPanel.getBorder()).setTitle(cipherMode.isUsingNonce() ? "Encryption/Decryption nonce" : "Encryption/Decryption IV(Initial Vector)");
-			ivTextFieldPanel.updateUI();
+			((TitledBorder) ivPanel.getBorder()).setTitle(cipherMode.isUsingNonce() ? "Encryption/Decryption nonce" : "Encryption/Decryption IV(Initial Vector)");
+			ivPanel.updateUI();
 
 			// Check the cipher mode 'CFB' or 'OFB' selected
 			final boolean isCFBorOFB = cipherMode == CipherMode.CFB || cipherMode == CipherMode.OFB;
@@ -1299,345 +791,118 @@ public final class SymmetricKeyCipher extends JPanel
 						CipherPadding.NONE
 				}));
 		});
-
-		plainFromToTextButton.addActionListener(e ->
-		{
-			if (plainFromToTextButton.isSelected())
-			{
-				plainTextField.setEnabled(true);
-
-				plainFileField.setEnabled(false);
-				plainFileFindButton.setEnabled(false);
-			}
-		});
-		plainFromToFileButton.addActionListener(e ->
-		{
-			if (plainFromToFileButton.isSelected())
-			{
-				plainFileField.setEnabled(true);
-				plainFileFindButton.setEnabled(true);
-
-				plainTextField.setEnabled(false);
-			}
-		});
-
-		encryptedFromToTextButton.addActionListener(e ->
-		{
-			if (encryptedFromToTextButton.isSelected())
-			{
-				encryptedTextField.setEnabled(true);
-
-				encryptedFileField.setEnabled(false);
-				encryptedFileFindButton.setEnabled(false);
-			}
-		});
-		encryptedFromToFileButton.addActionListener(e ->
-		{
-			if (encryptedFromToFileButton.isSelected())
-			{
-				encryptedFileField.setEnabled(true);
-				encryptedFileFindButton.setEnabled(true);
-
-				encryptedTextField.setEnabled(false);
-			}
-		});
-
-		plainFileFindButton.addActionListener(e ->
-		{
-			final String filePath = Main.generateFindFileGUI(plainFileField.getText());
-			if (filePath != null)
-				plainFileField.setText(filePath);
-		});
-
-		encryptedFileFindButton.addActionListener(e ->
-		{
-			final String filePath = Main.generateFindFileGUI(encryptedFileField.getText());
-			if (filePath != null)
-				encryptedFileField.setText(filePath);
-		});
 		// </editor-fold>
 	}
 
-	private boolean doSavePlainBytes(final byte[] plainBytes) throws ExecutionException, InterruptedException
+	private boolean doSavePlainBytes(final byte[] bytes)
 	{
-		if (plainBytes == null || plainBytes.length == 0)
+		if (bytes == null || bytes.length == 0)
 			return false;
 
-		final Charset charset = StandardCharsets.UTF_8;
-		final boolean toFile = plainFromToFileButton.isSelected();
-
-		if (toFile)
+		try
 		{
-			final String plainFilePath = plainFileField.getText();
-
-			final File plainFile = new File(plainFilePath);
-
-			boolean isFileHasData;
-			try
-			{
-				isFileHasData = Files.readAllBytes(plainFile.toPath()).length > 0;
-			}
-			catch (@SuppressWarnings("unused") final IOException ignored)
-			{
-				isFileHasData = true;
-			}
-
-			if (plainFile.exists() && isFileHasData)
-				if (Main.warningMessageBox("File already exists and not empty", "The plain-message output file is not empty." + Main.lineSeparator + "If you continue this action, IT WILL OVERWRITE THE EXISTING DATA!", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE, new String[]
-				{
-						"Continue", "Cancel"
-				}, "Cancel").get() != 0)
-					return false;
-
-			try
-			{
-				if (!plainFile.exists())
-					plainFile.createNewFile();
-
-				Files.write(plainFile.toPath(), plainBytes, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-			}
-			catch (final IOException e)
-			{
-				// If IOException occurs while writing all bytes to the output file
-
-				final StringBuilder messageBuilder = new StringBuilder("Failed to save decrypted message to the file.").append(Main.lineSeparator).append(Main.lineSeparator);
-
-				// Print the cause of the problem
-				messageBuilder.append("IOException occurred while create the output file or writing all bytes to the output file").append(Main.lineSeparator).append(Main.lineSeparator);
-
-				// Plain file path
-				messageBuilder.append("Plain file path: ").append(plainFilePath).append(Main.lineSeparator);
-
-				Main.exceptionMessageBox(e.getClass().getCanonicalName(), messageBuilder.toString(), e);
-				return false;
-			}
+			plainTextPanel.write(bytes);
+			return true;
 		}
-		else
+		catch (final Throwable e)
 		{
-			plainTextField.setText(new String(plainBytes, charset));
-			plainTextField.updateUI();
+			Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while encoding and writing plain-text", e);
+			return false;
 		}
-
-		return true;
 	}
 
 	private byte[] getPlainBytes()
 	{
-		final Charset charset = StandardCharsets.UTF_8;
-		final boolean fromFile = plainFromToFileButton.isSelected();
-
-		if (fromFile)
+		try
 		{
-			final String plainFilePath = plainFileField.getText();
-
-			if (plainFilePath == null || plainFilePath.isEmpty())
-				return null;
-
-			final File plainFile = new File(plainFilePath);
-			if (!plainFile.exists())
-			{
-				// If input file doesn't exists
-
-				final StringBuilder messageBuilder = new StringBuilder("Failed to encrypt the given string.").append(Main.lineSeparator).append(Main.lineSeparator);
-
-				// Print the cause of the problem
-				messageBuilder.append("Plain input file doesn't exists.").append(Main.lineSeparator).append(Main.lineSeparator);
-
-				// Plain file path
-				messageBuilder.append("Plain file path: ").append(plainFilePath).append(Main.lineSeparator);
-
-				Main.exceptionMessageBox("Plain input file doesn't exists", messageBuilder.toString(), new NoSuchFileException(plainFilePath));
-
-				return null;
-			}
-
-			try
-			{
-				return Files.readAllBytes(plainFile.toPath());
-			}
-			catch (final IOException e)
-			{
-				// If IOException occurs while reading all bytes from the input file
-
-				final StringBuilder messageBuilder = new StringBuilder("Failed to encrypt the given string.").append(Main.lineSeparator).append(Main.lineSeparator);
-
-				// Print the cause of the problem
-				messageBuilder.append("IOException occurred while reading all bytes from the input file").append(Main.lineSeparator).append(Main.lineSeparator);
-
-				// Plain file path
-				messageBuilder.append("Plain file path: ").append(plainFilePath).append(Main.lineSeparator);
-
-				Main.exceptionMessageBox(e.getClass().getCanonicalName(), messageBuilder.toString(), e);
-			}
-
+			return plainTextPanel.read();
+		}
+		catch (final Throwable e)
+		{
+			Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while reading, parsing and decoding plain-text", e);
 			return null;
 		}
-		return plainTextField.getText().getBytes(charset);
 	}
 
-	private boolean doSaveEncryptedBytes(final byte[] encryptedBytes) throws ExecutionException, InterruptedException
+	private boolean doSaveEncryptedBytes(final byte[] bytes)
 	{
-		if (encryptedBytes == null || encryptedBytes.length == 0)
+		if (bytes == null || bytes.length == 0)
 			return false;
 
-		final boolean toFile = encryptedFromToFileButton.isSelected();
-		if (toFile)
+		try
 		{
-			final String encryptedFilePath = encryptedFileField.getText();
-
-			final File encryptedFile = new File(encryptedFilePath);
-
-			boolean isFileHasData;
-
-			try
-			{
-				isFileHasData = Files.readAllBytes(encryptedFile.toPath()).length > 0;
-			}
-			catch (final IOException ignored)
-			{
-				isFileHasData = true;
-			}
-
-			if (encryptedFile.exists() && isFileHasData)
-				if (Main.warningMessageBox("File already exists and not empty", "The encrypted-message output file is not empty." + Main.lineSeparator + "If you continue this action, IT WILL OVERWRITE THE EXISTING DATA!", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE, new String[]
-				{
-						"Continue", "Cancel"
-				}, "Cancel").get() != 0)
-					return false;
-
-			try
-			{
-				if (!encryptedFile.exists())
-					encryptedFile.createNewFile();
-
-				Files.write(encryptedFile.toPath(), encryptedBytes, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-			}
-			catch (final IOException e)
-			{
-				// If IOException occurs while writing all bytes to the output file
-
-				final StringBuilder messageBuilder = new StringBuilder("Failed to save encrypted message to the file.").append(Main.lineSeparator).append(Main.lineSeparator);
-
-				// Print the cause of the problem
-				messageBuilder.append("IOException occurred while create the output file or writing all bytes to the output file").append(Main.lineSeparator).append(Main.lineSeparator);
-
-				// Encrypted file path
-				messageBuilder.append("Encrypted file path: ").append(encryptedFilePath).append(Main.lineSeparator);
-
-				Main.exceptionMessageBox(e.getClass().getCanonicalName(), messageBuilder.toString(), e);
-				return false;
-			}
+			cipherTextPanel.write(bytes);
+			return true;
 		}
-		else
-			EventQueue.invokeLater(() ->
-			{
-				encryptedTextField.setText(new String(encryptedBytes, StandardCharsets.ISO_8859_1));
-				encryptedTextField.updateUI();
-			});
-
-		return true;
+		catch (final Throwable e)
+		{
+			Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while encoding and writing cipher-text", e);
+			return false;
+		}
 	}
 
 	private byte[] getEncryptedBytes()
 	{
-		final boolean toFile = encryptedFromToFileButton.isSelected();
-
-		if (toFile)
+		try
 		{
-			final String encryptedFilePath = encryptedFileField.getText();
-
-			if (encryptedFilePath == null || encryptedFilePath.isEmpty())
-				return null;
-
-			final File encryptedFile = new File(encryptedFilePath);
-			if (!encryptedFile.exists())
-			{
-				// If input file doesn't exists
-
-				final StringBuilder messageBuilder = new StringBuilder("Failed to decrypt the given encrypted message.").append(Main.lineSeparator).append(Main.lineSeparator);
-
-				// Print the cause of the problem
-				messageBuilder.append("Encrypted input file doesn't exists.").append(Main.lineSeparator).append(Main.lineSeparator);
-
-				// Encrypted file path
-				messageBuilder.append("Encrypted file path: ").append(encryptedFilePath).append(Main.lineSeparator);
-
-				Main.exceptionMessageBox("Encrypted file doesn't exists", messageBuilder.toString(), new NoSuchFileException(encryptedFilePath));
-
-				return null;
-			}
-
-			try
-			{
-				return Files.readAllBytes(encryptedFile.toPath());
-			}
-			catch (final IOException e)
-			{
-				// If IOException occurs while reading all bytes from the input file
-
-				final StringBuilder messageBuilder = new StringBuilder("Failed to decrypt the given encrypted message").append(Main.lineSeparator).append(Main.lineSeparator);
-
-				// Print the cause of the problem
-				messageBuilder.append("IOException occurred while reading all bytes from the encrypted file").append(Main.lineSeparator).append(Main.lineSeparator);
-
-				// Encrypted file path
-				messageBuilder.append("Encrypted file path: ").append(encryptedFilePath).append(Main.lineSeparator);
-
-				Main.exceptionMessageBox(e.getClass().getCanonicalName(), messageBuilder.toString(), e);
-			}
-
+			return cipherTextPanel.read();
+		}
+		catch (final Throwable e)
+		{
+			Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while reading, parsing and decoding cipher-text", e);
 			return null;
 		}
-		return encryptedTextField.getText().getBytes(StandardCharsets.ISO_8859_1);
 	}
 
 	private byte[] getKey(final CipherAlgorithm cipherAlgorithm, final byte paddingByte)
 	{
-		final Charset charset = StandardCharsets.UTF_8;
-
 		final int defaultKeyLength = cipherAlgorithm.getAvailableKeySizes() != null ? (int) Optional.ofNullable(keySizeCB.getSelectedItem()).orElse(256) / 8 : -1;
 		final int minKeySize = cipherAlgorithm.getMinKeySize();
 		final int maxKeySize = cipherAlgorithm.getMaxKeySize();
 		final int minKeyLength = minKeySize > 0 ? minKeySize : defaultKeyLength;
 		final int maxKeyLength = maxKeySize > 0 ? maxKeySize : defaultKeyLength;
 
-		final String keyString = keyTextField.getText();
+		final byte[] key;
 
-		if (keyString == null || keyString.isEmpty())
+		try
+		{
+			key = keyPanel.read();
+		}
+		catch (final Throwable t)
+		{
+			Main.exceptionMessageBox(t.getClass().getCanonicalName(), "Exception occurred while reading, parsing and decoding key", t);
+			return null;
+		}
+
+		if (key == null || key.length <= 0)
 			return null;
 
-		final byte[] key = keyString.getBytes(charset);
-		final byte[] paddedKey = CipherHelper.pad(key, minKeyLength, maxKeyLength, paddingByte);
-		final int keyBytesSize = paddedKey.length;
+		// TODO
+		// if (!Arrays.equals(key, paddedKey))
+		// EventQueue.invokeLater(() -> keyTextActualLabel.setText("Actual value is \"" + paddedKeyString + "\""));
 
-		final String paddedKeyString = new String(paddedKey, charset);
-		if (!Arrays.equals(key, paddedKey))
-			EventQueue.invokeLater(() -> keyTextActualLabel.setText("Actual value is \"" + paddedKeyString + "\""));
-		Main.LOGGER.info(String.format("key[%d]: \"%s\" -> paddedKey[%d]: \"%s\" - %d bytes (%d bits)", keyString.length(), keyString, paddedKeyString.length(), paddedKeyString, keyBytesSize, keyBytesSize << 3));
-
-		return paddedKey;
+		return CipherHelper.pad(key, minKeyLength, maxKeyLength, paddingByte);
 	}
 
 	private byte[] getInitialVector(final AbstractCipher cipher, final byte paddingByte)
 	{
-		final Charset charset = StandardCharsets.UTF_8;
+		final byte[] iv;
 
-		final String ivString = ivTextField.getText();
+		try
+		{
+			iv = ivPanel.read();
+		}
+		catch (final Throwable t)
+		{
+			Main.exceptionMessageBox(t.getClass().getCanonicalName(), "Exception occurred while reading, parsing and decoding initial vector", t);
+			return null;
+		}
 
-		if (ivString == null || ivString.isEmpty())
+		if (iv == null || iv.length <= 0)
 			return null;
 
 		final int ivSize = cipher.getIVSize();
-		final byte[] iv = ivString.getBytes(charset);
-		final byte[] paddedIV = CipherHelper.pad(iv, ivSize, ivSize, paddingByte);
-		final int paddedIVSize = paddedIV.length;
-
-		final String paddedIVString = new String(paddedIV, charset);
-		if (!Arrays.equals(iv, paddedIV))
-			EventQueue.invokeLater(() -> ivTextActualLabel.setText("Actual value is \"" + paddedIVString + "\""));
-		Main.LOGGER.info(String.format("iv[%d]: \"%s\" -> paddedIV[%d]: \"%s\" - %d bytes (%d bits)", ivString.length(), ivString, paddedIVString.length(), paddedIVString, paddedIVSize, paddedIVSize << 3));
-
-		return paddedIV;
+		return CipherHelper.pad(iv, ivSize, ivSize, paddingByte);
 	}
 
 	private AbstractCipher createCipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding, final int unitBytes) throws CipherException
@@ -1678,44 +943,28 @@ public final class SymmetricKeyCipher extends JPanel
 	byte[] doEncrypt(byte[] bytes) throws CipherException
 	{
 		if (bytes == null || bytes.length == 0)
-			throw new CipherException(CipherExceptionType.EMPTY_INPUT);
+			return null;
 
 		final CipherAlgorithm cipherAlg = Optional.ofNullable((CipherAlgorithm) cipherAlgorithmCB.getSelectedItem()).orElse(CipherAlgorithm.AES);
 		final CipherMode cipherMode = Optional.ofNullable((CipherMode) cipherAlgorithmModeCB.getSelectedItem()).orElse(CipherMode.ECB);
 
-		// Padding
-		final String paddingCharFieldText = paddingCharField.getText();
-		if (paddingCharFieldText == null || paddingCharFieldText.isEmpty())
-			throw new CipherException(CipherExceptionType.EMPTY_PADDING);
-
-		final byte paddingByte = (byte) (paddingCharField.getText().charAt(0) & 0xFF);
+		final byte paddingByte = (byte) (requireNonBlank(paddingCharField.getText(), CipherExceptionType.EMPTY_PADDING).charAt(0) & 0xFF);
 
 		final AbstractCipher cipher = createCipher(cipherAlg, cipherMode, Optional.ofNullable((CipherPadding) cipherAlgorithmPaddingCB.getSelectedItem()).orElse(CipherPadding.PKCS5), (int) Optional.ofNullable(cipherAlgorithmModeCFBOFBUnitBytesCB.getSelectedItem()).orElse(16));
 
 		Main.LOGGER.info(cipher.toString());
 
-		final byte[] key = getKey(cipherAlg, paddingByte);
-		if (key == null)
-			throw new CipherException(CipherExceptionType.EMPTY_KEY);
-		cipher.setKey(key);
+		cipher.setKey(requireNonNull(getKey(cipherAlg, paddingByte), CipherExceptionType.EMPTY_KEY));
 
 		if (cipher.requireIV())
-		{
-			final byte[] iv = getInitialVector(cipher, paddingByte);
-			if (iv == null)
-				throw new CipherException(CipherExceptionType.EMPTY_IV);
-			cipher.setIV(iv, (int) Optional.ofNullable(cipherAlgorithmModeAEADTagLenCB.getSelectedItem()).orElse(128));
-		}
+			cipher.setIV(requireNonNull(getInitialVector(cipher, paddingByte), CipherExceptionType.EMPTY_IV), (int) Optional.ofNullable(cipherAlgorithmModeAEADTagLenCB.getSelectedItem()).orElse(128));
 
 		cipher.init(Cipher.ENCRYPT_MODE);
 
 		if (cipher.requirePaddedInput())
 			bytes = CipherHelper.padMultipleOf(bytes, cipher.getBlockSize(), paddingByte);
 
-		final byte[] result = cipher.doFinal(bytes);
-		if (result == null)
-			throw new CipherException(CipherExceptionType.EMPTY_RESPONSE);
-		return base64EncryptedText.isSelected() ? Base64.getEncoder().encode(result) : result;
+		return cipher.doFinal(bytes);
 	}
 
 	byte[] doDecrypt(byte[] bytes) throws CipherException
@@ -1723,42 +972,19 @@ public final class SymmetricKeyCipher extends JPanel
 		if (bytes == null || bytes.length == 0)
 			return null;
 
-		if (base64EncryptedText.isSelected())
-			try
-			{
-				bytes = Base64.getDecoder().decode(bytes);
-			}
-			catch (final IllegalArgumentException e)
-			{
-				throw new CipherException(CipherExceptionType.BASE64_DECODE_EXCEPTION, new String(bytes, StandardCharsets.UTF_8));
-			}
-
 		final CipherAlgorithm cipherAlg = Optional.ofNullable((CipherAlgorithm) cipherAlgorithmCB.getSelectedItem()).orElse(CipherAlgorithm.AES);
 		final CipherMode cipherMode = Optional.ofNullable((CipherMode) cipherAlgorithmModeCB.getSelectedItem()).orElse(CipherMode.ECB);
 
-		// Padding
-		final String paddingCharFieldText = paddingCharField.getText();
-		if (paddingCharFieldText == null || paddingCharFieldText.isEmpty())
-			return null;
-
-		final byte paddingByte = (byte) (paddingCharField.getText().charAt(0) & 0xFF);
+		final byte paddingByte = (byte) (requireNonBlank(paddingCharField.getText(), CipherExceptionType.EMPTY_PADDING).charAt(0) & 0xFF);
 
 		final AbstractCipher cipher = createCipher(cipherAlg, cipherMode, Optional.ofNullable((CipherPadding) cipherAlgorithmPaddingCB.getSelectedItem()).orElse(CipherPadding.PKCS5), (int) Optional.ofNullable(cipherAlgorithmModeCFBOFBUnitBytesCB.getSelectedItem()).orElse(16));
 
 		Main.LOGGER.info(cipher.toString());
 
-		final byte[] key = getKey(cipherAlg, paddingByte);
-		if (key == null)
-			return null;
-		cipher.setKey(key);
+		cipher.setKey(requireNonNull(getKey(cipherAlg, paddingByte), CipherExceptionType.EMPTY_KEY));
 
 		if (cipher.requireIV())
-		{
-			final byte[] iv = getInitialVector(cipher, paddingByte);
-			if (iv == null)
-				return null;
-			cipher.setIV(iv, (int) Optional.ofNullable(cipherAlgorithmModeAEADTagLenCB.getSelectedItem()).orElse(128));
-		}
+			cipher.setIV(requireNonNull(getInitialVector(cipher, paddingByte), CipherExceptionType.EMPTY_IV), (int) Optional.ofNullable(cipherAlgorithmModeAEADTagLenCB.getSelectedItem()).orElse(128));
 
 		cipher.init(Cipher.DECRYPT_MODE);
 
@@ -1766,5 +992,19 @@ public final class SymmetricKeyCipher extends JPanel
 			bytes = CipherHelper.padMultipleOf(bytes, cipher.getBlockSize(), paddingByte);
 
 		return cipher.doFinal(bytes);
+	}
+
+	private static <T> T requireNonNull(final T ref, final CipherExceptionType ifNull) throws CipherException
+	{
+		if (ref == null)
+			throw new CipherException(ifNull);
+		return ref;
+	}
+
+	private static String requireNonBlank(final String stringRef, final CipherExceptionType ifNull) throws CipherException
+	{
+		if (stringRef == null || stringRef.isEmpty())
+			throw new CipherException(ifNull);
+		return stringRef;
 	}
 }

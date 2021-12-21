@@ -25,7 +25,7 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 
 import fancytext.Main;
-import fancytext.digest.DigestAlgorithm;
+import fancytext.hash.HashAlgorithm;
 import fancytext.utils.Encoding;
 import fancytext.utils.PlainDocumentWithLimit;
 import fancytext.utils.MultiThreading;
@@ -45,7 +45,7 @@ public final class PublicKeyCipher extends JPanel
 	private final JTextField keyModulusField;
 	private final JToggleButton encryptWithPublicToggle;
 	private final JComboBox<CipherAlgorithmPadding> cipherAlgorithmPaddingCB;
-	private final JComboBox<DigestAlgorithm> cipherAlgorithmPaddingOAEPHashAlgorithmCB;
+	private final JComboBox<HashAlgorithm> cipherAlgorithmPaddingOAEPHashAlgorithmCB;
 	private final JTextField plainFileField;
 	private final JTextField encryptedFileField;
 	private final JRadioButton encryptedFromToFileButton;
@@ -1204,12 +1204,12 @@ public final class PublicKeyCipher extends JPanel
 		((PlainDocumentWithLimit) plainTextField.getDocument()).setLimit(117); // (1024 bits => 128 bytes) - 11(padding bytes) = 117 bytes
 
 		// OAEP hash algorithm combo box initialization
-		cipherAlgorithmPaddingOAEPHashAlgorithmCB.setModel(new DefaultComboBoxModel<>(new Vector<>(Arrays.stream(DigestAlgorithm.values()).filter(a -> a.getProviderName() != null).collect(Collectors.toList()))));
-		cipherAlgorithmPaddingOAEPHashAlgorithmCB.setSelectedItem(DigestAlgorithm.SHA2);
+		cipherAlgorithmPaddingOAEPHashAlgorithmCB.setModel(new DefaultComboBoxModel<>(new Vector<>(Arrays.stream(HashAlgorithm.values()).filter(a -> a.getProviderName() != null).collect(Collectors.toList()))));
+		cipherAlgorithmPaddingOAEPHashAlgorithmCB.setSelectedItem(HashAlgorithm.SHA2);
 		cipherAlgorithmPaddingOAEPHashAlgorithmPanel.setEnabled(false);
 		cipherAlgorithmPaddingOAEPHashAlgorithmCB.setEnabled(false);
 
-		stateSizeCB.setModel(new DefaultComboBoxModel<>(DigestAlgorithm.Skein.getAvailableDigestSizesBoxed())); // This combo box is exist only for Skein mode
+		stateSizeCB.setModel(new DefaultComboBoxModel<>(HashAlgorithm.Skein.getAvailableDigestSizesBoxed())); // This combo box is exist only for Skein mode
 
 		plainFromToTextButton.setSelected(true);
 		encryptedFromToTextButton.setSelected(true);
@@ -1236,7 +1236,7 @@ public final class PublicKeyCipher extends JPanel
 			cipherAlgorithmPaddingOAEPHashAlgorithmPanel.setEnabled(oaep);
 			cipherAlgorithmPaddingOAEPHashAlgorithmCB.setEnabled(oaep);
 
-			final DigestAlgorithm oaepAlg = (DigestAlgorithm) cipherAlgorithmPaddingOAEPHashAlgorithmCB.getSelectedItem();
+			final HashAlgorithm oaepAlg = (HashAlgorithm) cipherAlgorithmPaddingOAEPHashAlgorithmCB.getSelectedItem();
 			final boolean digestSizesAvailable = oaepAlg != null && oaepAlg.getAvailableDigestSizes() != null && oaep;
 			if (digestSizesAvailable)
 				digestSizeCB.setModel(new DefaultComboBoxModel<>(oaepAlg.getAvailableDigestSizesBoxed()));
@@ -1244,7 +1244,7 @@ public final class PublicKeyCipher extends JPanel
 			digestSizeCB.setEnabled(digestSizesAvailable);
 			digestSizeLabel.setEnabled(digestSizesAvailable);
 
-			final boolean isSkein = oaepAlg == DigestAlgorithm.Skein;
+			final boolean isSkein = oaepAlg == HashAlgorithm.Skein;
 			final int stateSizeBits = (int) Optional.ofNullable(stateSizeCB.getSelectedItem()).orElse(256);
 
 			if (isSkein)
@@ -1284,7 +1284,7 @@ public final class PublicKeyCipher extends JPanel
 
 		cipherAlgorithmPaddingOAEPHashAlgorithmCB.addActionListener(e ->
 		{
-			final DigestAlgorithm newOAEPAlg = (DigestAlgorithm) cipherAlgorithmPaddingOAEPHashAlgorithmCB.getSelectedItem();
+			final HashAlgorithm newOAEPAlg = (HashAlgorithm) cipherAlgorithmPaddingOAEPHashAlgorithmCB.getSelectedItem();
 			final boolean digestSizesAvailable = newOAEPAlg != null && newOAEPAlg.getAvailableDigestSizes() != null;
 			if (digestSizesAvailable)
 				digestSizeCB.setModel(new DefaultComboBoxModel<>(newOAEPAlg.getAvailableDigestSizesBoxed()));
@@ -1292,7 +1292,7 @@ public final class PublicKeyCipher extends JPanel
 			digestSizeCB.setEnabled(digestSizesAvailable);
 			digestSizeLabel.setEnabled(digestSizesAvailable);
 
-			final boolean isSkein = newOAEPAlg == DigestAlgorithm.Skein;
+			final boolean isSkein = newOAEPAlg == HashAlgorithm.Skein;
 			final int stateSizeBits = (int) Optional.ofNullable(stateSizeCB.getSelectedItem()).orElse(256);
 
 			if (isSkein)
@@ -2183,7 +2183,7 @@ public final class PublicKeyCipher extends JPanel
 
 		final Algorithm alg = Optional.ofNullable((Algorithm) cipherAlgorithmCB.getSelectedItem()).orElse(Algorithm.RSA);
 		final CipherAlgorithmPadding cipherPadding = Optional.ofNullable((CipherAlgorithmPadding) cipherAlgorithmPaddingCB.getSelectedItem()).orElse(CipherAlgorithmPadding.PKCS1);
-		final DigestAlgorithm oaepPaddingDigest = Optional.ofNullable((DigestAlgorithm) cipherAlgorithmPaddingOAEPHashAlgorithmCB.getSelectedItem()).orElse(DigestAlgorithm.SHA2);
+		final HashAlgorithm oaepPaddingDigest = Optional.ofNullable((HashAlgorithm) cipherAlgorithmPaddingOAEPHashAlgorithmCB.getSelectedItem()).orElse(HashAlgorithm.SHA2);
 
 		final boolean usePrivateToEncrypt = encryptWithPublicToggle.isSelected();
 		final boolean encodeEncrypted = base64EncryptedText.isSelected();
@@ -2312,7 +2312,7 @@ public final class PublicKeyCipher extends JPanel
 
 		final Algorithm alg = Optional.ofNullable((Algorithm) cipherAlgorithmCB.getSelectedItem()).orElse(Algorithm.RSA);
 		final CipherAlgorithmPadding cipherPadding = Optional.ofNullable((CipherAlgorithmPadding) cipherAlgorithmPaddingCB.getSelectedItem()).orElse(CipherAlgorithmPadding.PKCS1);
-		final DigestAlgorithm oaepPaddingDigest = Optional.ofNullable((DigestAlgorithm) cipherAlgorithmPaddingOAEPHashAlgorithmCB.getSelectedItem()).orElse(DigestAlgorithm.SHA2);
+		final HashAlgorithm oaepPaddingDigest = Optional.ofNullable((HashAlgorithm) cipherAlgorithmPaddingOAEPHashAlgorithmCB.getSelectedItem()).orElse(HashAlgorithm.SHA2);
 
 		final boolean usePublicToDecrypt = encryptWithPublicToggle.isSelected();
 		final boolean decodeEncrypted = base64EncryptedText.isSelected();

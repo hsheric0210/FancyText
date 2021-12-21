@@ -4,15 +4,12 @@ import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.OpenOption;
-import java.util.Arrays;
-import java.util.Locale;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 
+// TODO: Configurable Base64 (as like Base16)
 public class EncodingPanel extends JPanel
 {
 	private final JComboBox<Encoding> encodingComboBox;
@@ -20,12 +17,17 @@ public class EncodingPanel extends JPanel
 	private final JTextField hexTokenDelimiterField;
 	private final JPanel hexTokenCasePanel;
 	private final JRadioButton hexTokenUpperCaseButton;
+	private final JPanel base64OptionsPanel;
+	private final JRadioButton urlsafeBase64Button;
+	private final JRadioButton mimeBase64Button;
+	private final JCheckBox doPaddingBase64Button;
 
 	public EncodingPanel(final Encoding defaultValue)
 	{
 		this.defaultValue = defaultValue;
 
 		final boolean hexadecimal = defaultValue == Encoding.HEXADECIMAL;
+		final boolean base64 = defaultValue == Encoding.BASE64;
 
 		setBorder(BorderFactory.createTitledBorder(null, "Encoding", TitledBorder.CENTER, TitledBorder.TOP));
 
@@ -36,7 +38,7 @@ public class EncodingPanel extends JPanel
 		};
 		layout.rowHeights = new int[]
 		{
-				20, 0, 0, 0
+				20, 0, 0, 0, 0
 		};
 		layout.columnWeights = new double[]
 		{
@@ -44,9 +46,9 @@ public class EncodingPanel extends JPanel
 		};
 		layout.rowWeights = new double[]
 		{
-				0.0, 0.0, 0.0, Double.MIN_VALUE
+				0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE
 		};
-		super.setLayout(layout);
+		setLayout(layout);
 
 		encodingComboBox = new JComboBox<>();
 		encodingComboBox.setModel(new DefaultComboBoxModel<>(Encoding.values()));
@@ -82,6 +84,7 @@ public class EncodingPanel extends JPanel
 		hexTokenDelimiterPanel.setBorder(BorderFactory.createTitledBorder(null, "Hexadecimal token delimiter", TitledBorder.LEADING, TitledBorder.TOP));
 		hexTokenDelimiterPanel.setVisible(hexadecimal);
 		final GridBagConstraints hexTokenDelimiterPanelConstraints = new GridBagConstraints();
+		hexTokenDelimiterPanelConstraints.insets = new Insets(0, 0, 5, 0);
 		hexTokenDelimiterPanelConstraints.anchor = GridBagConstraints.PAGE_START;
 		hexTokenDelimiterPanelConstraints.fill = GridBagConstraints.HORIZONTAL;
 		hexTokenDelimiterPanelConstraints.gridx = 0;
@@ -93,21 +96,48 @@ public class EncodingPanel extends JPanel
 		hexTokenDelimiterPanel.add(hexTokenDelimiterField, BorderLayout.CENTER);
 		hexTokenDelimiterField.setColumns(10);
 
-		final ButtonGroup caseButtonGroup = new ButtonGroup();
-		caseButtonGroup.add(hexTokenUpperCaseButton);
-		caseButtonGroup.add(hexTokenLowerCaseButton);
+		base64OptionsPanel = new JPanel();
+		base64OptionsPanel.setBorder(BorderFactory.createTitledBorder(null, "Base64 options", TitledBorder.LEADING, TitledBorder.TOP));
+		base64OptionsPanel.setVisible(base64);
+		final GridBagConstraints gbc_base64OptionsPanel = new GridBagConstraints();
+		gbc_base64OptionsPanel.anchor = GridBagConstraints.PAGE_START;
+		gbc_base64OptionsPanel.fill = GridBagConstraints.HORIZONTAL;
+		gbc_base64OptionsPanel.gridx = 0;
+		gbc_base64OptionsPanel.gridy = 3;
+		add(base64OptionsPanel, gbc_base64OptionsPanel);
+		base64OptionsPanel.setLayout(new BoxLayout(base64OptionsPanel, BoxLayout.PAGE_AXIS));
+
+		final JRadioButton basicBase64Button = new JRadioButton("Basic");
+		basicBase64Button.setSelected(true);
+		base64OptionsPanel.add(basicBase64Button);
+
+		urlsafeBase64Button = new JRadioButton("URL and Filename safe");
+		base64OptionsPanel.add(urlsafeBase64Button);
+
+		mimeBase64Button = new JRadioButton("MIME");
+		base64OptionsPanel.add(mimeBase64Button);
+
+		doPaddingBase64Button = new JCheckBox("Do Padding");
+		doPaddingBase64Button.setSelected(true);
+		base64OptionsPanel.add(doPaddingBase64Button);
+
+		final ButtonGroup hexCaseButtonGroup = new ButtonGroup();
+		hexCaseButtonGroup.add(hexTokenUpperCaseButton);
+		hexCaseButtonGroup.add(hexTokenLowerCaseButton);
+
+		final ButtonGroup base64ButtonGroup = new ButtonGroup();
+		base64ButtonGroup.add(basicBase64Button);
+		base64ButtonGroup.add(urlsafeBase64Button);
+		base64ButtonGroup.add(mimeBase64Button);
 
 		encodingComboBox.addActionListener(e ->
 		{
 			final boolean isHex = getCurrentEncoding() == Encoding.HEXADECIMAL;
 			hexTokenCasePanel.setVisible(isHex);
 			hexTokenDelimiterPanel.setVisible(isHex);
-		});
-	}
 
-	@Override
-	public void setLayout(final LayoutManager mgr)
-	{
+			base64OptionsPanel.setVisible(getCurrentEncoding() == Encoding.BASE64);
+		});
 	}
 
 	private Encoding getCurrentEncoding()
@@ -117,47 +147,12 @@ public class EncodingPanel extends JPanel
 
 	public String encode(final byte[] bytes)
 	{
-		final Encoding encoding = getCurrentEncoding();
-		final boolean isHex = encoding == Encoding.HEXADECIMAL;
-
-		final boolean upper = hexTokenUpperCaseButton.isSelected();
-		final String delimiter = hexTokenDelimiterField.getText();
-		if (isHex && delimiter != null && !delimiter.isEmpty())
-			return encodeHexTokenized(bytes, delimiter, upper);
-
-		final String encode = encoding.encode(bytes);
-		if (isHex && upper)
-			return encode.toUpperCase(Locale.ROOT);
-
-		return encode;
+		return getCurrentEncoding().encode(bytes, getEncoderParameters(), getEncoderFlags());
 	}
 
 	public byte[] decode(final String string)
 	{
 		return getCurrentEncoding().decode(string);
-	}
-
-	private static String encodeHexTokenized(final byte[] bytes, final CharSequence delimiter, final boolean upper)
-	{
-		return IntStream.range(0, bytes.length).mapToObj(i ->
-		{
-			String string = Integer.toUnsignedString(bytes[i], 16);
-			final int convertedLength = string.length();
-
-			if (convertedLength > 2)
-				// Truncate start
-				string = string.substring(convertedLength - 2);
-			else if (convertedLength < 2)
-			{
-				// Pad start
-				final char[] chars = new char[2];
-				Arrays.fill(chars, '0');
-				string.getChars(0, convertedLength, chars, 2 - convertedLength);
-				string = new String(chars);
-			}
-
-			return upper ? string.toUpperCase(Locale.ROOT) : string;
-		}).collect(Collectors.joining(delimiter));
 	}
 
 	public byte[] readEncoded(final File file) throws IOException
@@ -167,6 +162,41 @@ public class EncodingPanel extends JPanel
 
 	public void writeEncoded(final File file, final byte[] bytes, final OpenOption... options) throws IOException
 	{
-		getCurrentEncoding().writeEncoded(file, bytes, options);
+		getCurrentEncoding().writeEncoded(file, bytes, getEncoderParameters(), getEncoderFlags(), options);
+	}
+
+	private Object getEncoderParameters()
+	{
+		if (getCurrentEncoding() == Encoding.HEXADECIMAL)
+			return hexTokenDelimiterField.getText();
+
+		return null;
+	}
+
+	private int getEncoderFlags()
+	{
+		switch (getCurrentEncoding())
+		{
+			case HEXADECIMAL:
+				if (hexTokenUpperCaseButton.isSelected())
+					return HexEncoder.HEX_UPPERCASE;
+				break;
+
+			case BASE64:
+				int flags = 0;
+
+				if (urlsafeBase64Button.isSelected())
+					flags |= Base64Encoder.BASE64_URLSAFE;
+				if (mimeBase64Button.isSelected())
+					flags |= Base64Encoder.BASE64_MIME;
+				if (doPaddingBase64Button.isSelected())
+					flags |= Base64Encoder.BASE64_DO_PADDING;
+
+				return flags;
+
+			default:
+		}
+
+		return 0;
 	}
 }

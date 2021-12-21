@@ -2,19 +2,16 @@ package fancytext.encrypt.symmetric;
 
 public enum CipherExceptionType
 {
-	EMPTY_INPUT("Input is empty"),
 	EMPTY_PADDING("Padding byte is empty"),
-	EMPTY_KEY("Key is empty"),
-	EMPTY_IV("Initial vector is empty"),
-	EMPTY_RESPONSE("Cipher returned null"),
+	EMPTY_KEY("Cipher key is empty"),
+	EMPTY_IV("Cipher initial vector is empty"),
 	ABSENT_ARGUMENT("Argument not present"),
-	PROVIDER_UNAVAILABLE("It seems your Java version is not supporting SunJCE or BouncyCastle correctly"),
+	PROVIDER_UNAVAILABLE("It seems your Java version is not supporting SunJCE or BouncyCastle security provider as intended"),
 	UNSUPPORTED_ALGORITHM("Unsupported cipher algorithm"),
 	UNSUPPORTED_MODE("Unsupported cipher mode"),
 	UNSUPPORTED_PADDING("Unsupported cipher padding"),
 	INVALID_KEY("Invalid key"),
 	INVALID_IV("Invaild initial vector or nonce"),
-	BASE64_DECODE_EXCEPTION("Corrupted Base64 byte array"),
 	INITIALIZATION_UNSUCCESSFUL("Cipher initialization unsuccessful"),
 	PROCESS_UNSUCCESSFUL("Cipher process unsuccessful");
 

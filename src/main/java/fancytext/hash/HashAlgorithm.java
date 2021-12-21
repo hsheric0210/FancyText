@@ -1,6 +1,6 @@
-package fancytext.digest;
+package fancytext.hash;
 
-public enum DigestAlgorithm
+public enum HashAlgorithm
 {
 
 	CRC_16("", "CRC-16", 32),
@@ -47,12 +47,12 @@ public enum DigestAlgorithm
 	private final String providerName;
 	private final int[] availableDigestSizes;
 
-	DigestAlgorithm(final String id, final String displayName, final int... availableDigestSize)
+	HashAlgorithm(final String id, final String displayName, final int... availableDigestSize)
 	{
 		this(id, displayName, null, availableDigestSize);
 	}
 
-	DigestAlgorithm(final String id, final String displayName, final String providerName, final int... availableDigestSizes)
+	HashAlgorithm(final String id, final String displayName, final String providerName, final int... availableDigestSizes)
 	{
 		this.id = id;
 		this.displayName = displayName;

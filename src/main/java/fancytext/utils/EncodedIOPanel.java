@@ -41,7 +41,7 @@ public class EncodedIOPanel extends JPanel
 		};
 		layout.rowWeights = new double[]
 		{
-				0.0, 0.0, Double.MIN_VALUE
+				1.0, 0.0, Double.MIN_VALUE
 		};
 		setLayout(layout);
 
@@ -73,6 +73,7 @@ public class EncodedIOPanel extends JPanel
 		textPanel.add(textScroll);
 
 		textArea = new JTextArea();
+		textArea.setDocument(new PlainDocumentWithLimit());
 		textScroll.setViewportView(textArea);
 
 		final JPanel filePanel = new JPanel();
@@ -130,6 +131,14 @@ public class EncodedIOPanel extends JPanel
 		});
 	}
 
+	public void setTextLimit(final int newLimit)
+	{
+		final String text = textArea.getText();
+		((PlainDocumentWithLimit) textArea.getDocument()).setLimit(newLimit);
+		textArea.updateUI();
+		textArea.setText(text);
+	}
+
 	/**
 	 * @throws IllegalArgumentException
 	 *                                  Thrown when the decoding operation fails
@@ -143,11 +152,11 @@ public class EncodedIOPanel extends JPanel
 
 		if (!file.exists())
 		{
-			fileNameField.setBorder(BorderFactory.createLineBorder(Color.RED));
+			EventQueue.invokeLater(() -> fileNameField.setBorder(BorderFactory.createLineBorder(Color.RED)));
 			return null;
 		}
 
-		fileNameField.setBorder(null);
+		EventQueue.invokeLater(() -> fileNameField.setBorder(null));
 
 		return encodingPanel.readEncoded(file);
 	}
@@ -179,12 +188,12 @@ public class EncodedIOPanel extends JPanel
 					"Overwrite", "Abort"
 			}, "Abort").get() != 0)
 			{
-				fileNameField.setBorder(BorderFactory.createLineBorder(Color.YELLOW));
+				EventQueue.invokeLater(() -> fileNameField.setBorder(BorderFactory.createLineBorder(Color.YELLOW)));
 				return;
 			}
 		}
 
-		fileNameField.setBorder(null);
+		EventQueue.invokeLater(() -> fileNameField.setBorder(null));
 
 		encodingPanel.writeEncoded(file, bytes, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
 	}

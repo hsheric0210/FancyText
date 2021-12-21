@@ -1,11 +1,9 @@
 package fancytext.tabs.encrypt;
 
 import java.awt.*;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 import java.util.zip.Adler32;
 import java.util.zip.CRC32;
 
@@ -14,7 +12,7 @@ import javax.swing.border.TitledBorder;
 
 import at.favre.lib.bytes.Bytes;
 import fancytext.Main;
-import fancytext.digest.DigestAlgorithm;
+import fancytext.hash.HashAlgorithm;
 import fancytext.utils.CRC16;
 import fancytext.utils.EncodedIOPanel;
 import fancytext.utils.Encoding;
@@ -23,7 +21,7 @@ import fancytext.utils.MultiThreading;
 public final class Hasher extends JPanel
 {
 	private static final long serialVersionUID = 8738449172274570395L;
-	private final JComboBox<DigestAlgorithm> hashAlgorithmCB;
+	private final JComboBox<HashAlgorithm> hashAlgorithmCB;
 	private final JComboBox<Integer> hashDigestSizeBitsCB;
 	private final JPanel hashStateSizeBitsPanel;
 	private final JComboBox<Integer> hashStateSizeBitsCB;
@@ -213,13 +211,13 @@ public final class Hasher extends JPanel
 		hashDigestSizeBitsPanel.add(hashDigestSizeBitsCB, gbc_hashSizeBitsCB);
 		// </editor-fold>
 
-		hashAlgorithmCB.setModel(new DefaultComboBoxModel<>(DigestAlgorithm.values()));
-		hashAlgorithmCB.setSelectedItem(DigestAlgorithm.SHA2);
+		hashAlgorithmCB.setModel(new DefaultComboBoxModel<>(HashAlgorithm.values()));
+		hashAlgorithmCB.setSelectedItem(HashAlgorithm.SHA2);
 
-		hashDigestSizeBitsCB.setModel(new DefaultComboBoxModel<>(DigestAlgorithm.SHA2.getAvailableDigestSizesBoxed()));
+		hashDigestSizeBitsCB.setModel(new DefaultComboBoxModel<>(HashAlgorithm.SHA2.getAvailableDigestSizesBoxed()));
 		hashDigestSizeBitsCB.setSelectedItem(256);
 
-		hashStateSizeBitsCB.setModel(new DefaultComboBoxModel<>(DigestAlgorithm.Skein.getAvailableDigestSizesBoxed()));
+		hashStateSizeBitsCB.setModel(new DefaultComboBoxModel<>(HashAlgorithm.Skein.getAvailableDigestSizesBoxed()));
 
 		final JLabel hashStateSizeBitsLabel = new JLabel("bit");
 		final GridBagConstraints gbc_hashStateSizeBitsLabel = new GridBagConstraints();
@@ -243,10 +241,10 @@ public final class Hasher extends JPanel
 
 		hashAlgorithmCB.addActionListener(e ->
 		{
-			final DigestAlgorithm selected = Optional.ofNullable((DigestAlgorithm) hashAlgorithmCB.getSelectedItem()).orElse(DigestAlgorithm.SHA2);
+			final HashAlgorithm selected = Optional.ofNullable((HashAlgorithm) hashAlgorithmCB.getSelectedItem()).orElse(HashAlgorithm.SHA2);
 
 			final boolean isDigestSizesAvailable = Optional.ofNullable(selected.getAvailableDigestSizes()).map(available -> available.length > 0).orElse(false);
-			final boolean isSkein = selected == DigestAlgorithm.Skein;
+			final boolean isSkein = selected == HashAlgorithm.Skein;
 
 			final int stateSizeBits = (int) Optional.ofNullable(hashStateSizeBitsCB.getSelectedItem()).orElse(256);
 
@@ -388,20 +386,20 @@ public final class Hasher extends JPanel
 			return false;
 
 		final byte[] hash;
-		final DigestAlgorithm digestAlgorithm = Optional.ofNullable((DigestAlgorithm) hashAlgorithmCB.getSelectedItem()).orElse(DigestAlgorithm.SHA2);
+		final HashAlgorithm hashAlgorithm = Optional.ofNullable((HashAlgorithm) hashAlgorithmCB.getSelectedItem()).orElse(HashAlgorithm.SHA2);
 		final int messageBytesSize = messageBytes.length;
 
 		final int stateSizeBits = (int) Optional.ofNullable(hashStateSizeBitsCB.getSelectedItem()).orElse(256);
 		final int digestSizeBits = (int) Optional.ofNullable(hashDigestSizeBitsCB.getSelectedItem()).orElse(256);
 
-		final String algorithmString = getAlgorithmString(digestAlgorithm, stateSizeBits, digestSizeBits);
+		final String algorithmString = getAlgorithmString(hashAlgorithm, stateSizeBits, digestSizeBits);
 
 		try
 		{
-			if (digestAlgorithm.getProviderName() != null)
+			if (hashAlgorithm.getProviderName() != null)
 			{
 				// Message digest algorithms supported by security provider
-				final MessageDigest md = MessageDigest.getInstance(algorithmString, digestAlgorithm.getProviderName());
+				final MessageDigest md = MessageDigest.getInstance(algorithmString, hashAlgorithm.getProviderName());
 				md.update(messageBytes);
 				hash = md.digest();
 			}
@@ -409,7 +407,7 @@ public final class Hasher extends JPanel
 			{
 				// Check-sum algorithms supported by natively
 				final long checksum;
-				switch (digestAlgorithm)
+				switch (hashAlgorithm)
 				{
 					case CRC_16:
 					{
@@ -455,12 +453,12 @@ public final class Hasher extends JPanel
 				messageBuilder.append("It seems your Java version is not supporting the specified hash algorithm.").append(Main.lineSeparator);
 
 			// Hash algorithm provider
-			final Provider provider = Security.getProvider(digestAlgorithm.getProviderName());
+			final Provider provider = Security.getProvider(hashAlgorithm.getProviderName());
 			final String providerInfo = provider != null ? provider.getInfo() : "null";
-			messageBuilder.append("Hash algorithm provider: ").append(digestAlgorithm.getProviderName()).append("(").append(providerInfo).append(")").append(Main.lineSeparator);
+			messageBuilder.append("Hash algorithm provider: ").append(hashAlgorithm.getProviderName()).append("(").append(providerInfo).append(")").append(Main.lineSeparator);
 
 			// Hash algorithm
-			messageBuilder.append("Hash algorithm: ").append(algorithmString).append("(").append(digestAlgorithm).append(")").append(Main.lineSeparator);
+			messageBuilder.append("Hash algorithm: ").append(algorithmString).append("(").append(hashAlgorithm).append(")").append(Main.lineSeparator);
 
 			// Message to be hashed
 			messageBuilder.append("Message to be hashed: ").append(Main.filterStringForPopup(new String(messageBytes, StandardCharsets.UTF_8))).append(" (byteArrayLength: ").append(messageBytesSize).append(")").append(Main.lineSeparator);
@@ -471,7 +469,7 @@ public final class Hasher extends JPanel
 		return true;
 	}
 
-	static String getAlgorithmString(final DigestAlgorithm algorithm, final int stateSizeBits, final int digestSizeBits)
+	static String getAlgorithmString(final HashAlgorithm algorithm, final int stateSizeBits, final int digestSizeBits)
 	{
 		final StringBuilder algorithmBuilder = new StringBuilder(algorithm.getId());
 

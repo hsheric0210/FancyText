@@ -13,10 +13,13 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.*;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -31,7 +34,7 @@ public final class ClipboardAnalyzer extends JPanel
 	public ClipboardAnalyzer()
 	{
 		// <editor-fold desc="UI initialization">
-		setBorder(new TitledBorder(null, "Clipboard analyzer", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		setBorder(BorderFactory.createTitledBorder(null, "Clipboard analyzer", TitledBorder.LEADING, TitledBorder.TOP));
 
 		final GridBagLayout gridBagLayout = new GridBagLayout();
 		gridBagLayout.columnWidths = new int[]
@@ -53,7 +56,7 @@ public final class ClipboardAnalyzer extends JPanel
 		setLayout(gridBagLayout);
 
 		final JPanel dataFlavorPanel = new JPanel();
-		dataFlavorPanel.setBorder(new TitledBorder(null, "Data", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
+		dataFlavorPanel.setBorder(BorderFactory.createTitledBorder(null, "Data", TitledBorder.LEADING, TitledBorder.TOP));
 		final GridBagConstraints gbc_dataFlavorPanel = new GridBagConstraints();
 		gbc_dataFlavorPanel.insets = new Insets(0, 0, 5, 0);
 		gbc_dataFlavorPanel.fill = GridBagConstraints.BOTH;
@@ -184,10 +187,22 @@ public final class ClipboardAnalyzer extends JPanel
 						e.printStackTrace();
 					}
 
+				Charset charset = null;
+				if (tableValues.containsKey("Charset") && tableValues.get("Charset").containsKey(i))
+					try
+					{
+						charset = Charset.forName(tableValues.get("Charset").get(i));
+					}
+					catch (final UnsupportedCharsetException ignored)
+					{
+
+					}
+
 				String stringValue;
+
 				try
 				{
-					stringValue = toString(contents.getTransferData(flavor));
+					stringValue = toString(contents.getTransferData(flavor), charset);
 				}
 				catch (final UnsupportedFlavorException | IOException e)
 				{
@@ -207,7 +222,7 @@ public final class ClipboardAnalyzer extends JPanel
 			tableValuesSorted.put(DataFlavorTableModel.SUBTYPE, tableValues.get(DataFlavorTableModel.SUBTYPE));
 
 			for (final Entry<String, Map<Integer, String>> entry : tableValues.entrySet())
-				if (!DataFlavorTableModel.MIME_TYPE.equals(entry.getKey()) && !DataFlavorTableModel.PRIMARY_TYPE.equals(entry.getKey()) && !DataFlavorTableModel.SUBTYPE.equals(entry.getKey()) && !DataFlavorTableModel.VALUE.equals(entry.getKey()))
+				if (Stream.of(DataFlavorTableModel.MIME_TYPE, DataFlavorTableModel.PRIMARY_TYPE, DataFlavorTableModel.SUBTYPE, DataFlavorTableModel.VALUE).noneMatch(s -> s.equals(entry.getKey())))
 					tableValuesSorted.put(entry.getKey(), entry.getValue());
 
 			tableValuesSorted.put(DataFlavorTableModel.VALUE, tableValues.get(DataFlavorTableModel.VALUE));
@@ -233,7 +248,7 @@ public final class ClipboardAnalyzer extends JPanel
 		}
 	}
 
-	private String toString(final Object data)
+	private String toString(final Object data, final Charset charset)
 	{
 		if (data == null)
 			return "null";
@@ -250,19 +265,24 @@ public final class ClipboardAnalyzer extends JPanel
 
 			try
 			{
-				final byte[] bytes = new byte[inputStream.available()];
-				inputStream.read(bytes, 0, bytes.length);
-
 				final StringJoiner joiner = new StringJoiner(" ");
 
-				for (final byte b : bytes)
-					joiner.add(String.format("%02X", b));
+				final byte[] buffer = new byte[1024];
+				final int actualRead;
+				if ((actualRead = inputStream.read(buffer, 0, buffer.length)) > 0)
+				{
+					if (charset != null)
+						return new String(buffer, 0, actualRead, charset);
+
+					for (final byte b : buffer)
+						joiner.add(String.format("%02X", b));
+				}
 
 				return joiner.toString();
 			}
-			catch (final IOException e)
+			catch (final OutOfMemoryError | IOException e)
 			{
-				return "Error while reading bytes from the input stream: " + e;
+				return "Error: " + e;
 			}
 		}
 		// </editor-fold>
@@ -272,26 +292,34 @@ public final class ClipboardAnalyzer extends JPanel
 		{
 			final Reader reader = (Reader) data;
 
-			String str;
 			try (final BufferedReader bReader = new BufferedReader(reader))
 			{
-				str = bReader.lines().collect(Collectors.joining());
+				return bReader.lines().collect(Collectors.joining());
 			}
 			catch (final IOException e)
 			{
-				str = "Error while reading bytes from the input stream: " + e;
+				return "Error: " + e;
 			}
-			return str;
 		}
 		// </editor-fold>
 
 		// <editor-fold desc="If the data is a byte-buffer">
 		if (data instanceof ByteBuffer)
 		{
-			final ByteBuffer bbuf = (ByteBuffer) data;
+			final ByteBuffer buffer = (ByteBuffer) data;
 
-			final byte[] bytes = new byte[bbuf.remaining()];
-			bbuf.get(bytes, 0, bytes.length);
+			if (charset != null)
+				try
+				{
+					return charset.decode(buffer).toString();
+				}
+				catch (final Throwable t)
+				{
+					return "Error: " + t;
+				}
+
+			final byte[] bytes = new byte[buffer.position()];
+			buffer.get(bytes, 0, bytes.length);
 
 			final StringJoiner joiner = new StringJoiner(" ");
 
@@ -311,6 +339,10 @@ public final class ClipboardAnalyzer extends JPanel
 			if (dataClass == byte[].class)
 			{
 				final byte[] bArr = (byte[]) data;
+
+				if (charset != null)
+					return new String(bArr, 0, bArr.length, charset);
+
 				for (final byte b : bArr)
 					joiner.add(String.format("%02X", b));
 			}

@@ -6,7 +6,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
-import java.nio.file.StandardOpenOption;
 
 import at.favre.lib.bytes.Bytes;
 
@@ -21,7 +20,7 @@ public enum Encoding
 	BINARY("Binary", StandardCharsets.US_ASCII, new IEncoder()
 	{
 		@Override
-		public String encode(final byte[] bytes)
+		public String encode(final byte[] bytes, final Object parameters, final int flags)
 		{
 			return Bytes.from(bytes).encodeBinary();
 		}
@@ -39,7 +38,7 @@ public enum Encoding
 	OCTAL("Octal", StandardCharsets.US_ASCII, new IEncoder()
 	{
 		@Override
-		public String encode(final byte[] bytes)
+		public String encode(final byte[] bytes, final Object parameters, final int flags)
 		{
 			return Bytes.from(bytes).encodeOctal();
 		}
@@ -57,7 +56,7 @@ public enum Encoding
 	DECIMAL("Decimal", StandardCharsets.US_ASCII, new IEncoder()
 	{
 		@Override
-		public String encode(final byte[] bytes)
+		public String encode(final byte[] bytes, final Object parameters, final int flags)
 		{
 			return Bytes.from(bytes).encodeDec();
 		}
@@ -72,20 +71,7 @@ public enum Encoding
 	/**
 	 * Base16 or Hex representation
 	 */
-	HEXADECIMAL("Hexadecimal (Base16)", StandardCharsets.US_ASCII, new IEncoder()
-	{
-		@Override
-		public String encode(final byte[] bytes)
-		{
-			return Bytes.from(bytes).encodeHex(false);
-		}
-
-		@Override
-		public byte[] decode(final String string)
-		{
-			return Bytes.parseHex(string).array();
-		}
-	}),
+	HEXADECIMAL("Hexadecimal (Base16)", StandardCharsets.US_ASCII, new HexEncoder()),
 
 	/**
 	 * Base32
@@ -93,7 +79,7 @@ public enum Encoding
 	BASE32("Base32", StandardCharsets.US_ASCII, new IEncoder()
 	{
 		@Override
-		public String encode(final byte[] bytes)
+		public String encode(final byte[] bytes, final Object parameters, final int flags)
 		{
 			return Bytes.from(bytes).encodeBase32();
 		}
@@ -108,38 +94,7 @@ public enum Encoding
 	/**
 	 * Base64
 	 */
-	BASE64("Base64", StandardCharsets.US_ASCII, new IEncoder()
-	{
-		@Override
-		public String encode(final byte[] bytes)
-		{
-			return Bytes.from(bytes).encodeBase64();
-		}
-
-		@Override
-		public byte[] decode(final String string)
-		{
-			return Bytes.parseBase64(string).array();
-		}
-	}),
-
-	/**
-	 * Base64 with URL-safe variation substitution
-	 */
-	BASE64_URL("Base64 (URL-safe)", StandardCharsets.US_ASCII, new IEncoder()
-	{
-		@Override
-		public String encode(final byte[] bytes)
-		{
-			return Bytes.from(bytes).encodeBase64Url();
-		}
-
-		@Override
-		public byte[] decode(final String string)
-		{
-			return Bytes.parseBase64(string).array();
-		}
-	}),
+	BASE64("Base64", StandardCharsets.US_ASCII, new Base64Encoder()),
 
 	/**
 	 * Seven-bit ASCII, a.k.a. ISO646-US, a.k.a. the Basic Latin block of the Unicode character set
@@ -187,7 +142,7 @@ public enum Encoding
 		this(displayName, charset, new IEncoder()
 		{
 			@Override
-			public String encode(final byte[] bytes)
+			public String encode(final byte[] bytes, final Object parameters, final int flags)
 			{
 				return new String(bytes, charset);
 			}
@@ -206,9 +161,9 @@ public enum Encoding
 		return displayName;
 	}
 
-	public String encode(final byte[] bytes)
+	public String encode(final byte[] bytes, final Object parameters, final int flags)
 	{
-		return encoder.encode(bytes);
+		return encoder.encode(bytes, parameters, flags);
 	}
 
 	public byte[] decode(final String string)
@@ -221,8 +176,8 @@ public enum Encoding
 		return decode(new String(Files.readAllBytes(file.toPath()), charset));
 	}
 
-	public void writeEncoded(final File file, final byte[] bytes, final OpenOption... options) throws IOException
+	public void writeEncoded(final File file, final byte[] bytes, final Object encoderParameters, final int encoderFlags, final OpenOption... options) throws IOException
 	{
-		Files.write(file.toPath(), encode(bytes).getBytes(charset), options);
+		Files.write(file.toPath(), encode(bytes, encoderParameters, encoderFlags).getBytes(charset), options);
 	}
 }
