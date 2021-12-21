@@ -1,4 +1,4 @@
-package fancytext.tabs.fancify;
+package fancytext.gui.fancify;
 
 import java.awt.*;
 import java.util.*;

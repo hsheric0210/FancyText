@@ -1,4 +1,4 @@
-package fancytext.utils;
+package fancytext.gui;
 
 import java.awt.*;
 import java.io.File;
@@ -9,15 +9,22 @@ import java.util.Optional;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 
-// TODO: Configurable Base64 (as like Base16)
+import fancytext.utils.encoding.Base64Encoder;
+import fancytext.utils.encoding.Encoding;
+import fancytext.utils.encoding.HexEncoder;
+
 public class EncodingPanel extends JPanel
 {
-	private final JComboBox<Encoding> encodingComboBox;
 	private final Encoding defaultValue;
+
+	private final JComboBox<Encoding> encodingComboBox;
+	private final JPanel hexTokenDelimiterPanel;
 	private final JTextField hexTokenDelimiterField;
 	private final JPanel hexTokenCasePanel;
 	private final JRadioButton hexTokenUpperCaseButton;
+	private final JRadioButton hexTokenLowerCaseButton;
 	private final JPanel base64OptionsPanel;
+	private final JRadioButton basicBase64Button;
 	private final JRadioButton urlsafeBase64Button;
 	private final JRadioButton mimeBase64Button;
 	private final JCheckBox doPaddingBase64Button;
@@ -77,19 +84,19 @@ public class EncodingPanel extends JPanel
 		hexTokenUpperCaseButton.setSelected(true);
 		hexTokenCasePanel.add(hexTokenUpperCaseButton);
 
-		final JRadioButton hexTokenLowerCaseButton = new JRadioButton("Lower-case");
+		hexTokenLowerCaseButton = new JRadioButton("Lower-case");
 		hexTokenCasePanel.add(hexTokenLowerCaseButton);
 
-		final JPanel hexTokenDelimiterPanel = new JPanel();
+		hexTokenDelimiterPanel = new JPanel();
 		hexTokenDelimiterPanel.setBorder(BorderFactory.createTitledBorder(null, "Hexadecimal token delimiter", TitledBorder.LEADING, TitledBorder.TOP));
 		hexTokenDelimiterPanel.setVisible(hexadecimal);
-		final GridBagConstraints hexTokenDelimiterPanelConstraints = new GridBagConstraints();
-		hexTokenDelimiterPanelConstraints.insets = new Insets(0, 0, 5, 0);
-		hexTokenDelimiterPanelConstraints.anchor = GridBagConstraints.PAGE_START;
-		hexTokenDelimiterPanelConstraints.fill = GridBagConstraints.HORIZONTAL;
-		hexTokenDelimiterPanelConstraints.gridx = 0;
-		hexTokenDelimiterPanelConstraints.gridy = 2;
-		add(hexTokenDelimiterPanel, hexTokenDelimiterPanelConstraints);
+		final GridBagConstraints gbc_hexTokenDelimiterPanel = new GridBagConstraints();
+		gbc_hexTokenDelimiterPanel.insets = new Insets(0, 0, 5, 0);
+		gbc_hexTokenDelimiterPanel.anchor = GridBagConstraints.PAGE_START;
+		gbc_hexTokenDelimiterPanel.fill = GridBagConstraints.HORIZONTAL;
+		gbc_hexTokenDelimiterPanel.gridx = 0;
+		gbc_hexTokenDelimiterPanel.gridy = 2;
+		add(hexTokenDelimiterPanel, gbc_hexTokenDelimiterPanel);
 		hexTokenDelimiterPanel.setLayout(new BorderLayout(5, 5));
 
 		hexTokenDelimiterField = new JTextField();
@@ -107,7 +114,7 @@ public class EncodingPanel extends JPanel
 		add(base64OptionsPanel, gbc_base64OptionsPanel);
 		base64OptionsPanel.setLayout(new BoxLayout(base64OptionsPanel, BoxLayout.PAGE_AXIS));
 
-		final JRadioButton basicBase64Button = new JRadioButton("Basic");
+		basicBase64Button = new JRadioButton("Basic");
 		basicBase64Button.setSelected(true);
 		base64OptionsPanel.add(basicBase64Button);
 
@@ -138,6 +145,27 @@ public class EncodingPanel extends JPanel
 
 			base64OptionsPanel.setVisible(getCurrentEncoding() == Encoding.BASE64);
 		});
+	}
+
+	@Override
+	public void setEnabled(final boolean enabled)
+	{
+		encodingComboBox.setEnabled(enabled);
+
+		hexTokenDelimiterPanel.setEnabled(enabled);
+		hexTokenDelimiterField.setEnabled(enabled);
+
+		hexTokenCasePanel.setEnabled(enabled);
+		hexTokenUpperCaseButton.setEnabled(enabled);
+		hexTokenLowerCaseButton.setEnabled(enabled);
+
+		base64OptionsPanel.setEnabled(enabled);
+		basicBase64Button.setEnabled(enabled);
+		urlsafeBase64Button.setEnabled(enabled);
+		mimeBase64Button.setEnabled(enabled);
+		doPaddingBase64Button.setEnabled(enabled);
+
+		super.setEnabled(enabled);
 	}
 
 	private Encoding getCurrentEncoding()

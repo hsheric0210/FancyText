@@ -8,7 +8,6 @@
 plugins {
 	id 'java'
 	id 'idea'
-	id 'com.github.johnrengelman.shadow' version '6.1.0'
 }
 
 repositories {
@@ -33,7 +32,7 @@ task generateSources(type: Copy) {
 	{
 		if (f.name.startsWith("bcprov") && f.getName().endsWith(".jar")) {
 			bcprov = f.name
-			System.out.println("$bcprov")
+			System.out.println("Found BouncyCastle security provider: $bcprov")
 		}
 	}
 
@@ -48,18 +47,18 @@ compileJava.setSource "$buildDir/sources"
 compileJava.dependsOn generateSources
 
 jar {
-	finalizedBy shadowJar
-	from('libs') {
-		include 'bcprov-*.jar'
-	}
-
 	manifest {
 		attributes 'Main-Class': 'fancytext.Launch'
 	}
-}
 
-shadowJar {
-	dependencies {
-		include(dependency('at.favre.lib:bytes'))
+	from('libs') {
+		include 'bcprov-*.jar'
 	}
+	from {
+		configurations.runtimeClasspath.filter { !it.name.startsWith('bcprov') }.collect {
+			it.isDirectory() ? it : zipTree(it)
+		}
+	}
+
+	exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
 }

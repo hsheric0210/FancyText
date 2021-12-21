@@ -1,4 +1,4 @@
-package fancytext.tabs.encrypt;
+package fancytext.gui.encrypt;
 
 import java.awt.*;
 import java.io.File;
@@ -26,7 +26,7 @@ import javax.swing.border.TitledBorder;
 
 import fancytext.Main;
 import fancytext.hash.HashAlgorithm;
-import fancytext.utils.Encoding;
+import fancytext.utils.encoding.Encoding;
 import fancytext.utils.PlainDocumentWithLimit;
 import fancytext.utils.MultiThreading;
 

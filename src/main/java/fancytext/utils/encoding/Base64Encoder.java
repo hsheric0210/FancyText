@@ -1,4 +1,4 @@
-package fancytext.utils;
+package fancytext.utils.encoding;
 
 import java.util.Base64;
 

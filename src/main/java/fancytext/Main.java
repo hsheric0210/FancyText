@@ -22,14 +22,12 @@ import java.util.regex.Pattern;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
-import fancytext.tabs.encode.Base64Coder;
-import fancytext.tabs.encrypt.Hasher;
-import fancytext.tabs.encrypt.PublicKeyCipher;
-import fancytext.tabs.encrypt.SymmetricKeyCipher;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-
-import fancytext.tabs.*;
-import fancytext.tabs.fancify.TextFancifyTab;
+import fancytext.gui.ClipboardAnalyzer;
+import fancytext.gui.encode.Base64Coder;
+import fancytext.gui.encrypt.Hasher;
+import fancytext.gui.encrypt.PublicKeyCipher;
+import fancytext.gui.encrypt.symmetric.SymmetricKeyCipher;
+import fancytext.gui.fancify.TextFancifyTab;
 import fancytext.utils.MultiThreading;
 
 public final class Main extends JFrame

@@ -25,7 +25,7 @@ public class LEACipher extends AbstractCipher
 
 		theCipher = getCipher();
 
-		if (padding == CipherPadding.PKCS5)
+		if (padding == CipherPadding.PKCS7)
 			theCipher.setPadding(new PKCS5Padding(getBlockSize()));
 	}
 

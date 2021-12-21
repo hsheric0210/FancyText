@@ -1,4 +1,4 @@
-package fancytext.utils;
+package fancytext.gui;
 
 import java.awt.*;
 import java.io.File;
@@ -11,20 +11,22 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 
 import fancytext.Main;
+import fancytext.utils.PlainDocumentWithLimit;
+import fancytext.utils.encoding.Encoding;
 
 public class EncodedIOPanel extends JPanel
 {
 	private final EncodingPanel encodingPanel;
+	private final JPanel textPanel;
 	private final JRadioButton textButton;
 	private final JTextArea textArea;
+	private final JPanel filePanel;
 	private final JRadioButton fileButton;
 	private final JTextField fileNameField;
 	private final JButton fileFindButton;
 
 	public EncodedIOPanel(final String title, final Encoding defaultEncoding)
 	{
-		setSize(1000, 1000); // DEBUG: ONLY FOR TEST, REMOVED LATER
-
 		setBorder(BorderFactory.createTitledBorder(null, title, TitledBorder.LEADING, TitledBorder.TOP));
 		final GridBagLayout layout = new GridBagLayout();
 		layout.columnWidths = new int[]
@@ -33,7 +35,7 @@ public class EncodedIOPanel extends JPanel
 		};
 		layout.rowHeights = new int[]
 		{
-				150, 0, 0
+				125, 0, 0
 		};
 		layout.columnWeights = new double[]
 		{
@@ -55,14 +57,14 @@ public class EncodedIOPanel extends JPanel
 		encodingPanelConstraints.gridy = 0;
 		add(encodingPanel, encodingPanelConstraints);
 
-		final JPanel textPanel = new JPanel();
+		textPanel = new JPanel();
 		textPanel.setBorder(BorderFactory.createTitledBorder(null, "From/To Text", TitledBorder.LEADING, TitledBorder.TOP));
-		final GridBagConstraints textPanelConstraints = new GridBagConstraints();
-		textPanelConstraints.insets = new Insets(0, 0, 5, 0);
-		textPanelConstraints.fill = GridBagConstraints.BOTH;
-		textPanelConstraints.gridx = 1;
-		textPanelConstraints.gridy = 0;
-		add(textPanel, textPanelConstraints);
+		final GridBagConstraints gbc_textPanel = new GridBagConstraints();
+		gbc_textPanel.insets = new Insets(0, 0, 5, 0);
+		gbc_textPanel.fill = GridBagConstraints.BOTH;
+		gbc_textPanel.gridx = 1;
+		gbc_textPanel.gridy = 0;
+		add(textPanel, gbc_textPanel);
 		textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.LINE_AXIS));
 
 		textButton = new JRadioButton("Text");
@@ -76,13 +78,13 @@ public class EncodedIOPanel extends JPanel
 		textArea.setDocument(new PlainDocumentWithLimit());
 		textScroll.setViewportView(textArea);
 
-		final JPanel filePanel = new JPanel();
+		filePanel = new JPanel();
 		filePanel.setBorder(BorderFactory.createTitledBorder(null, "From/To File", TitledBorder.LEADING, TitledBorder.TOP));
-		final GridBagConstraints filePanelConstraints = new GridBagConstraints();
-		filePanelConstraints.fill = GridBagConstraints.BOTH;
-		filePanelConstraints.gridx = 1;
-		filePanelConstraints.gridy = 1;
-		add(filePanel, filePanelConstraints);
+		final GridBagConstraints gbc_filePanel = new GridBagConstraints();
+		gbc_filePanel.fill = GridBagConstraints.BOTH;
+		gbc_filePanel.gridx = 1;
+		gbc_filePanel.gridy = 1;
+		add(filePanel, gbc_filePanel);
 		filePanel.setLayout(new BoxLayout(filePanel, BoxLayout.LINE_AXIS));
 
 		fileButton = new JRadioButton("File");
@@ -129,6 +131,23 @@ public class EncodedIOPanel extends JPanel
 			if (filePath != null)
 				fileNameField.setText(filePath);
 		});
+	}
+
+	@Override
+	public void setEnabled(final boolean enabled)
+	{
+		encodingPanel.setEnabled(enabled);
+
+		textPanel.setEnabled(enabled);
+		textButton.setEnabled(enabled);
+		textArea.setEnabled(enabled);
+
+		filePanel.setEnabled(enabled);
+		fileButton.setEnabled(enabled);
+		fileNameField.setEnabled(enabled);
+		fileFindButton.setEnabled(enabled);
+
+		super.setEnabled(enabled);
 	}
 
 	public void setTextLimit(final int newLimit)

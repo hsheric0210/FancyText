@@ -1,8 +1,6 @@
-package fancytext.tabs.encrypt;
+package fancytext.gui.encrypt.symmetric;
 
 import java.awt.*;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
@@ -20,8 +18,8 @@ import fancytext.encrypt.symmetric.cipher.lea.LEACipher;
 import fancytext.encrypt.symmetric.cipher.rijndael.RijndaelAEADCipher;
 import fancytext.encrypt.symmetric.cipher.rijndael.RijndaelCipher;
 import fancytext.encrypt.symmetric.cipher.spiBased.*;
-import fancytext.utils.EncodedIOPanel;
-import fancytext.utils.Encoding;
+import fancytext.gui.EncodedIOPanel;
+import fancytext.utils.encoding.Encoding;
 import fancytext.utils.MultiThreading;
 import fancytext.utils.PlainDocumentWithLimit;
 
@@ -568,9 +566,9 @@ public final class SymmetricKeyCipher extends JPanel
 
 		cipherAlgorithmPaddingCB.setModel(new DefaultComboBoxModel<>(new CipherPadding[]
 		{
-				CipherPadding.NONE, CipherPadding.PKCS5, CipherPadding.ISO10126
+				CipherPadding.NONE, CipherPadding.PKCS7, CipherPadding.ISO10126
 		}));
-		cipherAlgorithmPaddingCB.setSelectedItem(CipherPadding.PKCS5);
+		cipherAlgorithmPaddingCB.setSelectedItem(CipherPadding.PKCS7);
 
 		final Vector<Integer> unitBytes = new Vector<>();
 		final int blockSize = CipherAlgorithm.AES.getBlockSize();
@@ -628,7 +626,7 @@ public final class SymmetricKeyCipher extends JPanel
 			cipherAlgorithmPaddingCB.setModel(new DefaultComboBoxModel<>(newAlgorithm.getSupportedPaddings()));
 			cipherAlgorithmPaddingCB.updateUI();
 
-			cipherAlgorithmPaddingCB.setSelectedItem(CipherPadding.PKCS5);
+			cipherAlgorithmPaddingCB.setSelectedItem(CipherPadding.PKCS7);
 
 			final boolean keySizesAvailable = newAlgorithm.getAvailableKeySizes() != null;
 
@@ -715,7 +713,7 @@ public final class SymmetricKeyCipher extends JPanel
 					if (doSaveEncryptedBytes(doEncrypt(getPlainBytes())))
 						Main.notificationMessageBox("Successfully encrypted!", "Successfully encrypted the plain message!", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null);
 				}
-				catch (final CipherException ex)
+				catch (final Throwable ex)
 				{
 					Main.exceptionMessageBox("Exception while encryption", "An exception occurred while encryption.", ex);
 				}
@@ -746,7 +744,7 @@ public final class SymmetricKeyCipher extends JPanel
 					if (doSavePlainBytes(doDecrypt(getEncryptedBytes())))
 						Main.notificationMessageBox("Successfully decrypted!", "Successfully decrypted the plain message!", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null);
 				}
-				catch (final CipherException ex)
+				catch (final Throwable ex)
 				{
 					Main.exceptionMessageBox("Exception while decryption", "An exception occurred while decryption.", ex);
 				}
@@ -950,9 +948,7 @@ public final class SymmetricKeyCipher extends JPanel
 
 		final byte paddingByte = (byte) (requireNonBlank(paddingCharField.getText(), CipherExceptionType.EMPTY_PADDING).charAt(0) & 0xFF);
 
-		final AbstractCipher cipher = createCipher(cipherAlg, cipherMode, Optional.ofNullable((CipherPadding) cipherAlgorithmPaddingCB.getSelectedItem()).orElse(CipherPadding.PKCS5), (int) Optional.ofNullable(cipherAlgorithmModeCFBOFBUnitBytesCB.getSelectedItem()).orElse(16));
-
-		Main.LOGGER.info(cipher.toString());
+		final AbstractCipher cipher = createCipher(cipherAlg, cipherMode, Optional.ofNullable((CipherPadding) cipherAlgorithmPaddingCB.getSelectedItem()).orElse(CipherPadding.PKCS7), (int) Optional.ofNullable(cipherAlgorithmModeCFBOFBUnitBytesCB.getSelectedItem()).orElse(16));
 
 		cipher.setKey(requireNonNull(getKey(cipherAlg, paddingByte), CipherExceptionType.EMPTY_KEY));
 
@@ -977,9 +973,7 @@ public final class SymmetricKeyCipher extends JPanel
 
 		final byte paddingByte = (byte) (requireNonBlank(paddingCharField.getText(), CipherExceptionType.EMPTY_PADDING).charAt(0) & 0xFF);
 
-		final AbstractCipher cipher = createCipher(cipherAlg, cipherMode, Optional.ofNullable((CipherPadding) cipherAlgorithmPaddingCB.getSelectedItem()).orElse(CipherPadding.PKCS5), (int) Optional.ofNullable(cipherAlgorithmModeCFBOFBUnitBytesCB.getSelectedItem()).orElse(16));
-
-		Main.LOGGER.info(cipher.toString());
+		final AbstractCipher cipher = createCipher(cipherAlg, cipherMode, Optional.ofNullable((CipherPadding) cipherAlgorithmPaddingCB.getSelectedItem()).orElse(CipherPadding.PKCS7), (int) Optional.ofNullable(cipherAlgorithmModeCFBOFBUnitBytesCB.getSelectedItem()).orElse(16));
 
 		cipher.setKey(requireNonNull(getKey(cipherAlg, paddingByte), CipherExceptionType.EMPTY_KEY));
 

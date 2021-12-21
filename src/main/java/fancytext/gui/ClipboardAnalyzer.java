@@ -1,4 +1,4 @@
-package fancytext.tabs;
+package fancytext.gui;
 
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;

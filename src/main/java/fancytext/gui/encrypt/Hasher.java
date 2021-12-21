@@ -1,4 +1,4 @@
-package fancytext.tabs.encrypt;
+package fancytext.gui.encrypt;
 
 import java.awt.*;
 import java.nio.charset.StandardCharsets;
@@ -14,8 +14,8 @@ import at.favre.lib.bytes.Bytes;
 import fancytext.Main;
 import fancytext.hash.HashAlgorithm;
 import fancytext.utils.CRC16;
-import fancytext.utils.EncodedIOPanel;
-import fancytext.utils.Encoding;
+import fancytext.gui.EncodedIOPanel;
+import fancytext.utils.encoding.Encoding;
 import fancytext.utils.MultiThreading;
 
 public final class Hasher extends JPanel

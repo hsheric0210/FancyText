@@ -1,4 +1,4 @@
-package fancytext.tabs.encode;
+package fancytext.gui.encode;
 
 import java.awt.*;
 import java.io.File;
@@ -18,7 +18,7 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 
 import fancytext.Main;
-import fancytext.utils.Encoding;
+import fancytext.utils.encoding.Encoding;
 import fancytext.utils.MultiThreading;
 
 public final class Base64Coder extends JPanel

@@ -75,7 +75,7 @@ public enum CipherAlgorithm
 			CipherMode.ECB, CipherMode.CBC, CipherMode.CFB, CipherMode.OFB, CipherMode.CTS, CipherMode.CCM, CipherMode.GCM
 	}, new CipherPadding[]
 	{
-			CipherPadding.NONE, CipherPadding.PKCS5
+			CipherPadding.NONE, CipherPadding.PKCS7
 	}, null, true, true, 128, 256);
 
 	private final String id;

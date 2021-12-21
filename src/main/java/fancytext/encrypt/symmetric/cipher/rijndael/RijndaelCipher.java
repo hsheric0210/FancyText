@@ -46,7 +46,7 @@ public class RijndaelCipher extends AbstractCipher
 		{
 			case ZERO_FILL:
 				return new ZeroBytePadding();
-			case PKCS5:
+			case PKCS7:
 				return new PKCS7Padding();
 			case ISO10126:
 				return new ISO10126d2Padding();

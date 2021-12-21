@@ -1,4 +1,4 @@
-package fancytext.tabs.fancify;
+package fancytext.gui.fancify;
 
 import java.util.*;
 import java.util.AbstractMap.SimpleImmutableEntry;
