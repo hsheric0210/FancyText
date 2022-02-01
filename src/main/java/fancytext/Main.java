@@ -24,9 +24,9 @@ import javax.swing.border.EmptyBorder;
 
 import fancytext.gui.ClipboardAnalyzer;
 import fancytext.gui.encode.Base64Coder;
-import fancytext.gui.encrypt.Hasher;
+import fancytext.gui.Hasher;
 import fancytext.gui.encrypt.PublicKeyCipher;
-import fancytext.gui.encrypt.symmetric.SymmetricKeyCipher;
+import fancytext.gui.encrypt.SymmetricKeyCipher;
 import fancytext.gui.fancify.TextFancifyTab;
 import fancytext.utils.MultiThreading;
 
@@ -212,8 +212,6 @@ public final class Main extends JFrame
 		// <editor-fold desc="Author label">
 		final JLabel byEric0210 = new JLabel("- by eric0210");
 		byEric0210.setEnabled(false);
-		final Font defaultFont = byEric0210.getFont();
-		byEric0210.setFont(new Font(defaultFont.getName(), Font.BOLD, 16));
 		final GridBagConstraints gbc_byEric0210 = new GridBagConstraints();
 		gbc_byEric0210.anchor = GridBagConstraints.LAST_LINE_END;
 		gbc_byEric0210.gridx = 0;

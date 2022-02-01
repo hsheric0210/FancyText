@@ -1,41 +1,40 @@
-package fancytext.encrypt.symmetric;
+package fancytext.hash;
 
 import java.security.GeneralSecurityException;
 
 import fancytext.Main;
-import fancytext.encrypt.symmetric.cipher.AbstractCipher;
 
-public class CipherException extends GeneralSecurityException
+public class DigestException extends GeneralSecurityException
 {
-	public CipherExceptionType type;
-	private final AbstractCipher cipher;
+	public DigestExceptionType type;
+	private final AbstractHash digest;
 
-	public CipherException(final CipherExceptionType type)
+	public DigestException(final DigestExceptionType type)
 	{
 		super(type.description);
 		this.type = type;
-		cipher = null;
+		digest = null;
 	}
 
-	public CipherException(final CipherExceptionType type, final Throwable thrown)
+	public DigestException(final DigestExceptionType type, final Throwable thrown)
 	{
 		super(type.description + ": " + thrown.getMessage(), thrown);
 		this.type = type;
-		cipher = null;
+		digest = null;
 	}
 
-	public CipherException(final CipherExceptionType type, final AbstractCipher cipher, final Throwable thrown)
+	public DigestException(final DigestExceptionType type, final AbstractHash digest, final Throwable thrown)
 	{
 		super(type.description + ": " + thrown.getMessage(), thrown);
 		this.type = type;
-		this.cipher = cipher;
+		this.digest = digest;
 	}
 
-	public CipherException(final CipherExceptionType type, final String message)
+	public DigestException(final DigestExceptionType type, final String message)
 	{
 		super(type.description + ": " + message);
 		this.type = type;
-		cipher = null;
+		digest = null;
 	}
 
 	@Override
@@ -49,8 +48,8 @@ public class CipherException extends GeneralSecurityException
 		if (getCause() != null)
 			builder.append("* Cause: ").append(getCause()).append(Main.lineSeparator);
 
-		if (cipher != null)
-			builder.append(cipher.dumpInformations());
+		if (digest != null)
+			builder.append(digest.dumpInformations());
 
 		builder.append(Main.lineSeparator);
 

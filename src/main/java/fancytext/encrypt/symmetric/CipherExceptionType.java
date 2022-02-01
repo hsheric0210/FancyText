@@ -2,6 +2,7 @@ package fancytext.encrypt.symmetric;
 
 public enum CipherExceptionType
 {
+	EMPTY_INPUT("Input is empty or null"),
 	EMPTY_PADDING("Padding byte is empty"),
 	EMPTY_KEY("Cipher key is empty"),
 	EMPTY_IV("Cipher initial vector is empty"),

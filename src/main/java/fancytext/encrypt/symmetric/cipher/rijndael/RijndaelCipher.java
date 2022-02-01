@@ -6,7 +6,9 @@ import java.util.StringJoiner;
 
 import javax.crypto.Cipher;
 
-import org.bouncycastle.crypto.*;
+import org.bouncycastle.crypto.BlockCipher;
+import org.bouncycastle.crypto.BufferedBlockCipher;
+import org.bouncycastle.crypto.CipherParameters;
 import org.bouncycastle.crypto.engines.RijndaelEngine;
 import org.bouncycastle.crypto.modes.*;
 import org.bouncycastle.crypto.paddings.*;
@@ -14,30 +16,24 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
 
 import fancytext.Main;
-import fancytext.encrypt.symmetric.CipherAlgorithm;
-import fancytext.encrypt.symmetric.CipherExceptionType;
-import fancytext.encrypt.symmetric.CipherMode;
-import fancytext.encrypt.symmetric.CipherPadding;
+import fancytext.encrypt.symmetric.*;
 import fancytext.encrypt.symmetric.cipher.AbstractCipher;
-import fancytext.encrypt.symmetric.CipherException;
 
 public class RijndaelCipher extends AbstractCipher
 {
-	private final BufferedBlockCipher theCipher;
 	private final int unitBytes;
 	private final int blockSize;
+
+	private BufferedBlockCipher theCipher;
+	private BlockCipherPadding _padding;
 	private KeyParameter keyParameter;
 	private CipherParameters parameters;
-	private final BlockCipherPadding _padding;
 
-	public RijndaelCipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding, final int unitBytes, final int blockSize) throws CipherException
+	public RijndaelCipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding, final int unitBytes, final int blockSizeBits)
 	{
 		super(algorithm, mode, padding);
 		this.unitBytes = unitBytes;
-		this.blockSize = blockSize;
-
-		_padding = getPadding();
-		theCipher = getCipher();
+		this.blockSize = blockSizeBits;
 	}
 
 	private BlockCipherPadding getPadding()
@@ -101,6 +97,13 @@ public class RijndaelCipher extends AbstractCipher
 	}
 
 	@Override
+	public void constructCipher() throws CipherException
+	{
+		_padding = getPadding();
+		theCipher = getCipher();
+	}
+
+	@Override
 	public void setKey(final byte[] key) throws CipherException
 	{
 		try
@@ -129,7 +132,7 @@ public class RijndaelCipher extends AbstractCipher
 	}
 
 	@Override
-	public void init(final int opMode) throws CipherException
+	public void initCipher(final int opMode) throws CipherException
 	{
 		requirePresent(parameters, "Key");
 

@@ -2,12 +2,8 @@ package fancytext.encrypt.symmetric.cipher.lea;
 
 import javax.crypto.Cipher;
 
-import fancytext.encrypt.symmetric.CipherAlgorithm;
-import fancytext.encrypt.symmetric.CipherExceptionType;
-import fancytext.encrypt.symmetric.CipherMode;
-import fancytext.encrypt.symmetric.CipherPadding;
+import fancytext.encrypt.symmetric.*;
 import fancytext.encrypt.symmetric.cipher.AbstractCipher;
-import fancytext.encrypt.symmetric.CipherException;
 import kr.re.nsr.crypto.BlockCipher.Mode;
 import kr.re.nsr.crypto.BlockCipherModeAE;
 import kr.re.nsr.crypto.symm.LEA.CCM;
@@ -15,16 +11,14 @@ import kr.re.nsr.crypto.symm.LEA.GCM;
 
 public class LEAAECipher extends AbstractCipher
 {
-	private final BlockCipherModeAE theCipher;
+	private BlockCipherModeAE theCipher;
 	private byte[] key;
 	private byte[] nonce;
 	private int aeadTagLength;
 
-	public LEAAECipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding) throws CipherException
+	public LEAAECipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding)
 	{
 		super(algorithm, mode, padding);
-
-		theCipher = getCipher();
 	}
 
 	private BlockCipherModeAE getCipher() throws CipherException
@@ -55,6 +49,12 @@ public class LEAAECipher extends AbstractCipher
 	}
 
 	@Override
+	public void constructCipher() throws CipherException
+	{
+		theCipher = getCipher();
+	}
+
+	@Override
 	public void setKey(final byte[] key)
 	{
 		this.key = key;
@@ -68,7 +68,7 @@ public class LEAAECipher extends AbstractCipher
 	}
 
 	@Override
-	public void init(final int opMode) throws CipherException
+	public void initCipher(final int opMode) throws CipherException
 	{
 		requirePresent(key, "Key");
 		requirePresent(nonce, "Nonce");

@@ -12,6 +12,7 @@ public abstract class AbstractCipher
 	protected final CipherPadding padding;
 
 	/**
+	 * Construct a new abstract cipher instance
 	 * @param algorithm
 	 *                  Cipher algorithm (example: AES)
 	 * @param mode
@@ -19,7 +20,7 @@ public abstract class AbstractCipher
 	 * @param padding
 	 *                  Cipher padding (example: PKCS5Padding)
 	 */
-	public AbstractCipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding) throws CipherException
+	public AbstractCipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding)
 	{
 		this.algorithm = algorithm;
 		this.mode = mode;
@@ -78,6 +79,8 @@ public abstract class AbstractCipher
 		return joiner.toString();
 	}
 
+	public abstract void constructCipher() throws CipherException;
+
 	/**
 	 * Set the cipher key
 	 * 
@@ -110,7 +113,7 @@ public abstract class AbstractCipher
 	 * @param opMode
 	 *               Cipher operation mode
 	 */
-	public abstract void init(final int opMode) throws CipherException;
+	public abstract void initCipher(final int opMode) throws CipherException;
 
 	/**
 	 * Process the data

@@ -26,7 +26,7 @@ public class AESCipher extends SpiBasedCipher
 	@Override
 	protected String getAlgorithmID()
 	{
-		if (padding == CipherPadding.NONE)
+		if (mode != CipherMode.PCBC && mode != CipherMode.CTR && mode != CipherMode.CTS && mode != CipherMode.CCM && padding == CipherPadding.NONE)
 			return algorithm.getId() + "_" + keyLengthBits;
 		return super.getAlgorithmID();
 	}

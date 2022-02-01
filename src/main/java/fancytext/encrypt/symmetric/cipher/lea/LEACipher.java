@@ -2,12 +2,8 @@ package fancytext.encrypt.symmetric.cipher.lea;
 
 import javax.crypto.Cipher;
 
-import fancytext.encrypt.symmetric.CipherAlgorithm;
-import fancytext.encrypt.symmetric.CipherMode;
-import fancytext.encrypt.symmetric.CipherPadding;
-import fancytext.encrypt.symmetric.CipherExceptionType;
+import fancytext.encrypt.symmetric.*;
 import fancytext.encrypt.symmetric.cipher.AbstractCipher;
-import fancytext.encrypt.symmetric.CipherException;
 import kr.re.nsr.crypto.BlockCipher.Mode;
 import kr.re.nsr.crypto.BlockCipherMode;
 import kr.re.nsr.crypto.padding.PKCS5Padding;
@@ -15,18 +11,13 @@ import kr.re.nsr.crypto.symm.LEA.*;
 
 public class LEACipher extends AbstractCipher
 {
-	private final BlockCipherMode theCipher;
+	private BlockCipherMode theCipher;
 	private byte[] key;
 	private byte[] iv;
 
-	public LEACipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding) throws CipherException
+	public LEACipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding)
 	{
 		super(algorithm, mode, padding);
-
-		theCipher = getCipher();
-
-		if (padding == CipherPadding.PKCS7)
-			theCipher.setPadding(new PKCS5Padding(getBlockSize()));
 	}
 
 	private BlockCipherMode getCipher() throws CipherException
@@ -50,6 +41,12 @@ public class LEACipher extends AbstractCipher
 	}
 
 	@Override
+	public void constructCipher() throws CipherException
+	{
+		theCipher = getCipher();
+	}
+
+	@Override
 	public void setKey(final byte[] key)
 	{
 		this.key = key;
@@ -62,9 +59,12 @@ public class LEACipher extends AbstractCipher
 	}
 
 	@Override
-	public void init(final int opMode) throws CipherException
+	public void initCipher(final int opMode) throws CipherException
 	{
 		requirePresent(key, "Key");
+
+		if (padding == CipherPadding.PKCS7)
+			theCipher.setPadding(new PKCS5Padding(getBlockSize()));
 
 		try
 		{

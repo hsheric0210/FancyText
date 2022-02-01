@@ -131,11 +131,11 @@ public class CCMMode extends BlockCipherModeAE
 		if (noncelen < 7 || noncelen > 13)
 			throw new IllegalArgumentException("length of nonce should be 7 ~ 13 bytes");
 
-		// init counter
+		// initCipher counter
 		ctr[0] = (byte) (14 - noncelen);
 		System.arraycopy(nonce, 0, ctr, 1, noncelen);
 
-		// init b0
+		// initCipher b0
 		final int tagfield = (taglen - 2) / 2;
 		block[0] = (byte) (tagfield << 3 & 0xff);
 		block[0] |= (byte) (14 - noncelen & 0xff);

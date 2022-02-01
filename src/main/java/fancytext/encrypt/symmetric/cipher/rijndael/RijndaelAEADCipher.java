@@ -14,29 +14,24 @@ import org.bouncycastle.crypto.params.AEADParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
 
 import fancytext.Main;
-import fancytext.encrypt.symmetric.CipherAlgorithm;
-import fancytext.encrypt.symmetric.CipherExceptionType;
-import fancytext.encrypt.symmetric.CipherMode;
-import fancytext.encrypt.symmetric.CipherPadding;
+import fancytext.encrypt.symmetric.*;
 import fancytext.encrypt.symmetric.cipher.AbstractCipher;
-import fancytext.encrypt.symmetric.CipherException;
 
 public class RijndaelAEADCipher extends AbstractCipher
 {
-	private final AEADBlockCipher theCipher;
 	private final int blockSize;
+
+	private AEADBlockCipher theCipher;
 	private KeyParameter keyParameter;
 	private CipherParameters parameters;
 
-	public RijndaelAEADCipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding, final int blockSize) throws CipherException
+	public RijndaelAEADCipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding, final int blockSize)
 	{
 		super(algorithm, mode, padding);
 		this.blockSize = blockSize;
-
-		theCipher = getCipher();
 	}
 
-	private AEADBlockCipher getCipher()
+	private AEADBlockCipher getCipher() throws CipherException
 	{
 		switch (mode)
 		{
@@ -45,7 +40,7 @@ public class RijndaelAEADCipher extends AbstractCipher
 			case GCM:
 				return new GCMBlockCipher(new RijndaelEngine(blockSize));
 			default:
-				return null;
+				throw new CipherException(CipherExceptionType.UNSUPPORTED_MODE, mode.name());
 		}
 	}
 
@@ -59,6 +54,12 @@ public class RijndaelAEADCipher extends AbstractCipher
 	protected void serializeAdditionalInformations(final StringJoiner joiner)
 	{
 		joiner.add("BlockSize=" + blockSize);
+	}
+
+	@Override
+	public void constructCipher() throws CipherException
+	{
+		theCipher = getCipher();
 	}
 
 	@Override
@@ -78,7 +79,7 @@ public class RijndaelAEADCipher extends AbstractCipher
 	public void setIV(final byte[] iv, final int macSize) throws CipherException
 	{
 		requirePresent(keyParameter, "Key");
-		
+
 		try
 		{
 			parameters = new AEADParameters(keyParameter, macSize, iv);
@@ -90,7 +91,7 @@ public class RijndaelAEADCipher extends AbstractCipher
 	}
 
 	@Override
-	public void init(final int opMode) throws CipherException
+	public void initCipher(final int opMode) throws CipherException
 	{
 		requirePresent(parameters, "AEAD parameter");
 

@@ -1,4 +1,4 @@
-package fancytext.gui.encrypt.symmetric;
+package fancytext.gui.encrypt;
 
 import java.awt.*;
 import java.util.Arrays;
@@ -19,9 +19,9 @@ import fancytext.encrypt.symmetric.cipher.rijndael.RijndaelAEADCipher;
 import fancytext.encrypt.symmetric.cipher.rijndael.RijndaelCipher;
 import fancytext.encrypt.symmetric.cipher.spiBased.*;
 import fancytext.gui.EncodedIOPanel;
-import fancytext.utils.encoding.Encoding;
 import fancytext.utils.MultiThreading;
 import fancytext.utils.PlainDocumentWithLimit;
+import fancytext.utils.encoding.Encoding;
 
 public final class SymmetricKeyCipher extends JPanel
 {
@@ -243,7 +243,7 @@ public final class SymmetricKeyCipher extends JPanel
 		// Key-text field panel
 		keyPanel = new EncodedIOPanel("Cipher Key", Encoding.UTF_8);
 		final GridBagConstraints gbc_keyTextFieldPanel = new GridBagConstraints();
-		gbc_keyTextFieldPanel.insets = new Insets(10, 0, 5, 5);
+		gbc_keyTextFieldPanel.insets = new Insets(0, 0, 5, 5);
 		gbc_keyTextFieldPanel.fill = GridBagConstraints.BOTH;
 		gbc_keyTextFieldPanel.gridx = 1;
 		gbc_keyTextFieldPanel.gridy = 2;
@@ -905,48 +905,62 @@ public final class SymmetricKeyCipher extends JPanel
 
 	private AbstractCipher createCipher(final CipherAlgorithm algorithm, final CipherMode mode, final CipherPadding padding, final int unitBytes) throws CipherException
 	{
+		final AbstractCipher cipher;
+
 		switch (algorithm)
 		{
 			case AES:
-				return new AESCipher(algorithm, mode, padding, unitBytes, (int) Optional.ofNullable(keySizeCB.getSelectedItem()).orElse(256));
+				cipher = new AESCipher(algorithm, mode, padding, unitBytes, (int) Optional.ofNullable(keySizeCB.getSelectedItem()).orElse(256));
+				break;
 			case GOST28147:
-				return new GOST28147Cipher(algorithm, mode, padding, unitBytes, Optional.ofNullable((String) gost28147SBoxCB.getSelectedItem()).orElse("Default").toUpperCase(Locale.ENGLISH));
+				cipher = new GOST28147Cipher(algorithm, mode, padding, unitBytes, Optional.ofNullable((String) gost28147SBoxCB.getSelectedItem()).orElse("Default").toUpperCase(Locale.ENGLISH));
+				break;
 			case RC2:
-				return new RC2Cipher(algorithm, mode, padding, unitBytes);
+				cipher = new RC2Cipher(algorithm, mode, padding, unitBytes);
+				break;
 			case RC5_32:
 			case RC5_64:
-				return new RC5Cipher(algorithm, mode, padding, unitBytes, (int) rc5RoundsSpinner.getValue());
+				cipher = new RC5Cipher(algorithm, mode, padding, unitBytes, (int) rc5RoundsSpinner.getValue());
+				break;
 			case Threefish:
-				return new ThreefishCipher(algorithm, mode, padding, unitBytes, (int) Optional.ofNullable(keySizeCB.getSelectedItem()).orElse(256) / 8);
+				cipher = new ThreefishCipher(algorithm, mode, padding, unitBytes, (int) Optional.ofNullable(keySizeCB.getSelectedItem()).orElse(256) / 8);
+				break;
 			case XSalsa20:
-				return new XSalsa20Cipher(algorithm, mode, padding, unitBytes);
+				cipher = new XSalsa20Cipher(algorithm, mode, padding, unitBytes);
+				break;
 			case Rijndael:
 			{
 				final int blockSize = (int) Optional.ofNullable(rijndaelBlockSizeCB.getSelectedItem()).orElse(256);
 				if (mode.isAEADMode())
-					return new RijndaelAEADCipher(algorithm, mode, padding, blockSize);
-				return new RijndaelCipher(algorithm, mode, padding, unitBytes, blockSize);
+					cipher = new RijndaelAEADCipher(algorithm, mode, padding, blockSize);
+				else
+					cipher = new RijndaelCipher(algorithm, mode, padding, unitBytes, blockSize);
+				break;
 			}
 			case LEA:
 			{
 				if (mode.isAEADMode())
-					return new LEAAECipher(algorithm, mode, padding);
-				return new LEACipher(algorithm, mode, padding);
+					cipher = new LEAAECipher(algorithm, mode, padding);
+				else
+					cipher = new LEACipher(algorithm, mode, padding);
+				break;
 			}
 			default:
-				return new SpiBasedCipher(algorithm, mode, padding, unitBytes);
+				cipher = new SpiBasedCipher(algorithm, mode, padding, unitBytes);
 		}
+
+		cipher.constructCipher();
+		return cipher;
 	}
 
 	byte[] doEncrypt(byte[] bytes) throws CipherException
 	{
-		if (bytes == null || bytes.length == 0)
-			return null;
+		requireNonEmpty(bytes, CipherExceptionType.EMPTY_INPUT);
 
 		final CipherAlgorithm cipherAlg = Optional.ofNullable((CipherAlgorithm) cipherAlgorithmCB.getSelectedItem()).orElse(CipherAlgorithm.AES);
 		final CipherMode cipherMode = Optional.ofNullable((CipherMode) cipherAlgorithmModeCB.getSelectedItem()).orElse(CipherMode.ECB);
 
-		final byte paddingByte = (byte) (requireNonBlank(paddingCharField.getText(), CipherExceptionType.EMPTY_PADDING).charAt(0) & 0xFF);
+		final byte paddingByte = (byte) (requireNonEmpty(paddingCharField.getText(), CipherExceptionType.EMPTY_PADDING).charAt(0) & 0xFF);
 
 		final AbstractCipher cipher = createCipher(cipherAlg, cipherMode, Optional.ofNullable((CipherPadding) cipherAlgorithmPaddingCB.getSelectedItem()).orElse(CipherPadding.PKCS7), (int) Optional.ofNullable(cipherAlgorithmModeCFBOFBUnitBytesCB.getSelectedItem()).orElse(16));
 
@@ -955,7 +969,7 @@ public final class SymmetricKeyCipher extends JPanel
 		if (cipher.requireIV())
 			cipher.setIV(requireNonNull(getInitialVector(cipher, paddingByte), CipherExceptionType.EMPTY_IV), (int) Optional.ofNullable(cipherAlgorithmModeAEADTagLenCB.getSelectedItem()).orElse(128));
 
-		cipher.init(Cipher.ENCRYPT_MODE);
+		cipher.initCipher(Cipher.ENCRYPT_MODE);
 
 		if (cipher.requirePaddedInput())
 			bytes = CipherHelper.padMultipleOf(bytes, cipher.getBlockSize(), paddingByte);
@@ -965,13 +979,12 @@ public final class SymmetricKeyCipher extends JPanel
 
 	byte[] doDecrypt(byte[] bytes) throws CipherException
 	{
-		if (bytes == null || bytes.length == 0)
-			return null;
+		requireNonEmpty(bytes, CipherExceptionType.EMPTY_INPUT);
 
 		final CipherAlgorithm cipherAlg = Optional.ofNullable((CipherAlgorithm) cipherAlgorithmCB.getSelectedItem()).orElse(CipherAlgorithm.AES);
 		final CipherMode cipherMode = Optional.ofNullable((CipherMode) cipherAlgorithmModeCB.getSelectedItem()).orElse(CipherMode.ECB);
 
-		final byte paddingByte = (byte) (requireNonBlank(paddingCharField.getText(), CipherExceptionType.EMPTY_PADDING).charAt(0) & 0xFF);
+		final byte paddingByte = (byte) (requireNonEmpty(paddingCharField.getText(), CipherExceptionType.EMPTY_PADDING).charAt(0) & 0xFF);
 
 		final AbstractCipher cipher = createCipher(cipherAlg, cipherMode, Optional.ofNullable((CipherPadding) cipherAlgorithmPaddingCB.getSelectedItem()).orElse(CipherPadding.PKCS7), (int) Optional.ofNullable(cipherAlgorithmModeCFBOFBUnitBytesCB.getSelectedItem()).orElse(16));
 
@@ -980,7 +993,7 @@ public final class SymmetricKeyCipher extends JPanel
 		if (cipher.requireIV())
 			cipher.setIV(requireNonNull(getInitialVector(cipher, paddingByte), CipherExceptionType.EMPTY_IV), (int) Optional.ofNullable(cipherAlgorithmModeAEADTagLenCB.getSelectedItem()).orElse(128));
 
-		cipher.init(Cipher.DECRYPT_MODE);
+		cipher.initCipher(Cipher.DECRYPT_MODE);
 
 		if (cipher.requirePaddedInput())
 			bytes = CipherHelper.padMultipleOf(bytes, cipher.getBlockSize(), paddingByte);
@@ -995,10 +1008,17 @@ public final class SymmetricKeyCipher extends JPanel
 		return ref;
 	}
 
-	private static String requireNonBlank(final String stringRef, final CipherExceptionType ifNull) throws CipherException
+	private static String requireNonEmpty(final String stringRef, final CipherExceptionType ifNull) throws CipherException
 	{
 		if (stringRef == null || stringRef.isEmpty())
 			throw new CipherException(ifNull);
 		return stringRef;
+	}
+
+	private static byte[] requireNonEmpty(final byte[] bytesRef, final CipherExceptionType ifNull) throws CipherException
+	{
+		if (bytesRef == null || bytesRef.length <= 0)
+			throw new CipherException(ifNull);
+		return bytesRef;
 	}
 }

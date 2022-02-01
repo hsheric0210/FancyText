@@ -17,6 +17,7 @@ repositories {
 dependencies {
 	implementation fileTree(dir: 'libs', include: ['bcprov-*.jar'])
 	implementation 'at.favre.lib:bytes:1.5.0'
+	implementation 'net.boeckling:crc-64:1.0.0'
 
 	testImplementation 'junit:junit:4.12'
 	testImplementation 'org.powermock:powermock-api-mockito:1.6.6'

@@ -36,13 +36,13 @@ public abstract class BlockCipherModeBlock extends BlockCipherModeImpl
 	@Override
 	public void init(final Mode mode, final byte[] mk)
 	{
-		throw new UnsupportedOperationException("This init method is not applicable to " + getAlgorithmName());
+		throw new UnsupportedOperationException("This initCipher method is not applicable to " + getAlgorithmName());
 	}
 
 	@Override
 	public void init(final Mode mode, final byte[] mk, final byte[] iv)
 	{
-		throw new UnsupportedOperationException("This init method is not applicable to " + getAlgorithmName());
+		throw new UnsupportedOperationException("This initCipher method is not applicable to " + getAlgorithmName());
 	}
 
 	@Override

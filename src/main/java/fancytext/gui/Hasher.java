@@ -1,22 +1,24 @@
-package fancytext.gui.encrypt;
+package fancytext.gui;
 
 import java.awt.*;
-import java.nio.charset.StandardCharsets;
-import java.security.*;
 import java.util.Optional;
-import java.util.zip.Adler32;
-import java.util.zip.CRC32;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 
-import at.favre.lib.bytes.Bytes;
 import fancytext.Main;
+import fancytext.hash.AbstractHash;
+import fancytext.hash.DigestException;
+import fancytext.hash.DigestExceptionType;
 import fancytext.hash.HashAlgorithm;
-import fancytext.utils.CRC16;
-import fancytext.gui.EncodedIOPanel;
-import fancytext.utils.encoding.Encoding;
+import fancytext.hash.checksum.Adler32Checksum;
+import fancytext.hash.checksum.CRC16Checksum;
+import fancytext.hash.checksum.CRC32Checksum;
+import fancytext.hash.digest.RIPEMDAndSHAKEDigest;
+import fancytext.hash.digest.SkeinDigest;
+import fancytext.hash.digest.SpiBasedDigest;
 import fancytext.utils.MultiThreading;
+import fancytext.utils.encoding.Encoding;
 
 public final class Hasher extends JPanel
 {
@@ -336,8 +338,12 @@ public final class Hasher extends JPanel
 			{
 				try
 				{
-					if (doHash(getInputBytes()))
+					if (doSave(doHash(getInputBytes())))
 						Main.notificationMessageBox("Successfully hashed!", "Successfully hashed the message!", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null);
+				}
+				catch(final Throwable ex)
+				{
+					Main.exceptionMessageBox("Exception while digestion", "An exception occurred while digestion.", ex);
 				}
 				finally
 				{
@@ -367,126 +373,49 @@ public final class Hasher extends JPanel
 		}
 	}
 
-	private void doSave(final byte[] bytes)
+	private boolean doSave(final byte[] bytes)
 	{
-
 		try
 		{
 			hashOutputPanel.write(bytes);
+			return true;
 		}
 		catch (final Throwable e)
 		{
 			Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while encoding and writing output", e);
+			return false;
 		}
 	}
 
-	private boolean doHash(final byte[] messageBytes)
+	public static AbstractHash createHash(final HashAlgorithm algorithm, final int stateSizeBits, final int digestSizeBits) throws DigestException
 	{
-		if (messageBytes == null)
-			return false;
+		switch (algorithm)
+		{
+			case CRC_16:
+				return new CRC16Checksum(algorithm);
+			case CRC_32:
+				return new CRC32Checksum(algorithm);
+			case ADLER_32:
+				return new Adler32Checksum(algorithm);
+			case RIPEMD:
+			case SHAKE:
+				return new RIPEMDAndSHAKEDigest(algorithm, digestSizeBits);
+			case Skein:
+				return new SkeinDigest(algorithm, stateSizeBits, digestSizeBits);
+			default:
+				return new SpiBasedDigest(algorithm, digestSizeBits);
+		}
+	}
 
-		final byte[] hash;
+	private byte[] doHash(final byte[] messageBytes) throws DigestException
+	{
 		final HashAlgorithm hashAlgorithm = Optional.ofNullable((HashAlgorithm) hashAlgorithmCB.getSelectedItem()).orElse(HashAlgorithm.SHA2);
-		final int messageBytesSize = messageBytes.length;
-
 		final int stateSizeBits = (int) Optional.ofNullable(hashStateSizeBitsCB.getSelectedItem()).orElse(256);
 		final int digestSizeBits = (int) Optional.ofNullable(hashDigestSizeBitsCB.getSelectedItem()).orElse(256);
 
-		final String algorithmString = getAlgorithmString(hashAlgorithm, stateSizeBits, digestSizeBits);
-
-		try
-		{
-			if (hashAlgorithm.getProviderName() != null)
-			{
-				// Message digest algorithms supported by security provider
-				final MessageDigest md = MessageDigest.getInstance(algorithmString, hashAlgorithm.getProviderName());
-				md.update(messageBytes);
-				hash = md.digest();
-			}
-			else
-			{
-				// Check-sum algorithms supported by natively
-				final long checksum;
-				switch (hashAlgorithm)
-				{
-					case CRC_16:
-					{
-						final CRC16 crc16 = new CRC16();
-						for (final byte b : messageBytes)
-							crc16.update(b);
-						checksum = crc16.getValue();
-						break;
-					}
-					case CRC_32:
-					{
-						final CRC32 crc32 = new CRC32();
-						crc32.update(messageBytes);
-						checksum = crc32.getValue();
-						break;
-					}
-					case ADLER_32:
-					{
-						final Adler32 adler32 = new Adler32();
-						adler32.update(messageBytes);
-						checksum = adler32.getValue();
-						break;
-					}
-					default:
-						throw new NoSuchAlgorithmException("Algorithm is not implemented");
-				}
-
-				hash = Bytes.from(checksum).array();
-			}
-
-			doSave(hash);
-		}
-		catch (final NoSuchAlgorithmException | RuntimeException | NoSuchProviderException e)
-		{
-			final StringBuilder messageBuilder = new StringBuilder("Failed to hash the given message.").append(Main.lineSeparator).append(Main.lineSeparator);
-
-			// Print the cause of the problem
-			if (e instanceof RuntimeException)
-				messageBuilder.append("It seems your input is not supported by the specified hash algorithm.").append(Main.lineSeparator);
-			else if (e instanceof NoSuchProviderException)
-				messageBuilder.append("It seems your Java version is not supporting the specified security provider.").append(Main.lineSeparator);
-			else
-				messageBuilder.append("It seems your Java version is not supporting the specified hash algorithm.").append(Main.lineSeparator);
-
-			// Hash algorithm provider
-			final Provider provider = Security.getProvider(hashAlgorithm.getProviderName());
-			final String providerInfo = provider != null ? provider.getInfo() : "null";
-			messageBuilder.append("Hash algorithm provider: ").append(hashAlgorithm.getProviderName()).append("(").append(providerInfo).append(")").append(Main.lineSeparator);
-
-			// Hash algorithm
-			messageBuilder.append("Hash algorithm: ").append(algorithmString).append("(").append(hashAlgorithm).append(")").append(Main.lineSeparator);
-
-			// Message to be hashed
-			messageBuilder.append("Message to be hashed: ").append(Main.filterStringForPopup(new String(messageBytes, StandardCharsets.UTF_8))).append(" (byteArrayLength: ").append(messageBytesSize).append(")").append(Main.lineSeparator);
-
-			Main.exceptionMessageBox(e.getClass().getCanonicalName(), messageBuilder.toString(), e);
-		}
-
-		return true;
-	}
-
-	static String getAlgorithmString(final HashAlgorithm algorithm, final int stateSizeBits, final int digestSizeBits)
-	{
-		final StringBuilder algorithmBuilder = new StringBuilder(algorithm.getId());
-
-		if (Optional.ofNullable(algorithm.getAvailableDigestSizes()).map(available -> available.length > 1).orElse(true))
-			switch (algorithm)
-			{
-				case Skein:
-					algorithmBuilder.append("-").append(stateSizeBits).append("-").append(digestSizeBits); /* example: SKEIN-256-256 */
-					break;
-				case RIPEMD:
-				case SHAKE:
-					algorithmBuilder.append(digestSizeBits); /* example: SHAKE256 */
-					break;
-				default:
-					algorithmBuilder.append("-").append(digestSizeBits); /* example: SHA-256 */
-			}
-
-		return algorithmBuilder.toString();
+		final AbstractHash hash = createHash(hashAlgorithm, stateSizeBits, digestSizeBits);
+		hash.init();
+		hash.update(messageBytes);
+		return hash.digest();
 	}
 }

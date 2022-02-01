@@ -25,11 +25,26 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 
 import fancytext.Main;
+import fancytext.gui.Hasher;
 import fancytext.hash.HashAlgorithm;
-import fancytext.utils.encoding.Encoding;
-import fancytext.utils.PlainDocumentWithLimit;
+import fancytext.hash.digest.SpiBasedDigest;
 import fancytext.utils.MultiThreading;
+import fancytext.utils.PlainDocumentWithLimit;
+import fancytext.utils.encoding.Encoding;
 
+/**
+ * <p>
+ * TODO
+ *
+ * <ol>
+ * <li>전체적으로 갈아엎기 (SymmetricKeyCipher처럼)</li>
+ * <li>Asymmetric cipher는 알고리즘마다 요구하는 키나 매개변수 종류가 상이하게 다르니, 모든 알고리즘에서 공통적으로 사용되는 기본적인 정보 입력을 위한 패널들(Encrypt/Decrypt 버튼, Plain-text 패널, Cipher-text 패널, Cipher 알고리즘 선택 패널 등)만 유지하고,
+ *
+ * 나머지 키나 IV 등을 요구하는 패널들은 따로 개별 패널로 빼서 알고리즘에 따라 돌려쓸 수 있도록 만들기 (예시: RSACipherPanel, ElGamalCipherPanel 등)</li>
+ * </ol>
+ * </p>
+ *
+ */
 public final class PublicKeyCipher extends JPanel
 {
 	private static final long serialVersionUID = -7257463203150608739L;
@@ -456,7 +471,7 @@ public final class PublicKeyCipher extends JPanel
 
 		// Key panel - modulus panel
 		final JPanel keyModulusPanel = new JPanel();
-		keyModulusPanel.setBorder(new TitledBorder(null, "Modulus", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		keyModulusPanel.setBorder(new TitledBorder(null, "Modulus (n)", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		final GridBagConstraints gbc_keyModulusPanel = new GridBagConstraints();
 		gbc_keyModulusPanel.insets = new Insets(0, 0, 5, 0);
 		gbc_keyModulusPanel.fill = GridBagConstraints.BOTH;
@@ -493,7 +508,7 @@ public final class PublicKeyCipher extends JPanel
 
 		// Public key panel
 		final JPanel publicKeyPanel = new JPanel();
-		publicKeyPanel.setBorder(new TitledBorder(null, "Public key", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		publicKeyPanel.setBorder(new TitledBorder(null, "Public key (e)", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		final GridBagConstraints gbc_publicKeyPanel = new GridBagConstraints();
 		gbc_publicKeyPanel.insets = new Insets(0, 0, 5, 0);
 		gbc_publicKeyPanel.fill = GridBagConstraints.BOTH;
@@ -611,7 +626,7 @@ public final class PublicKeyCipher extends JPanel
 
 		// Private key panel
 		final JPanel privateKeyPanel = new JPanel();
-		privateKeyPanel.setBorder(new TitledBorder(null, "Private key", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		privateKeyPanel.setBorder(new TitledBorder(null, "Private key (d)", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		final GridBagConstraints gbc_privateKeyPanel = new GridBagConstraints();
 		gbc_privateKeyPanel.insets = new Insets(0, 0, 5, 0);
 		gbc_privateKeyPanel.fill = GridBagConstraints.BOTH;
@@ -2269,7 +2284,16 @@ public final class PublicKeyCipher extends JPanel
 				{
 					final int stateSize = (int) Optional.ofNullable(stateSizeCB.getSelectedItem()).orElse(256);
 					final int digestSize = (int) Optional.ofNullable(digestSizeCB.getSelectedItem()).orElse(256);
-					final String algorithmString = Hasher.getAlgorithmString(oaepPaddingDigest, stateSize, digestSize); // TODO: create stateSizeBits Combo box for SKEIN
+					SpiBasedDigest hash = null;
+					try
+					{
+						hash = (SpiBasedDigest) Hasher.createHash(oaepPaddingDigest, stateSize, digestSize);
+					}
+					catch (final Throwable ignored)
+					{
+
+					}
+					final String algorithmString = hash.getMessageDigestSpi(); // TODO: create stateSizeBits Combo box for SKEIN
 					oaepSpec = new OAEPParameterSpec(algorithmString, "MGF1", new MGF1ParameterSpec(algorithmString), PSpecified.DEFAULT);
 				}
 
@@ -2403,7 +2427,16 @@ public final class PublicKeyCipher extends JPanel
 			{
 				final int stateSize = (int) Optional.ofNullable(stateSizeCB.getSelectedItem()).orElse(256);
 				final int digestSize = (int) Optional.ofNullable(digestSizeCB.getSelectedItem()).orElse(256);
-				final String algorithmString = Hasher.getAlgorithmString(oaepPaddingDigest, stateSize, digestSize);
+				SpiBasedDigest hash = null;
+				try
+				{
+					hash = (SpiBasedDigest) Hasher.createHash(oaepPaddingDigest, stateSize, digestSize);
+				}
+				catch (final Throwable ignored)
+				{
+
+				}
+				final String algorithmString = hash.getMessageDigestSpi();
 				oaepSpec = new OAEPParameterSpec(algorithmString, "MGF1", new MGF1ParameterSpec(algorithmString), PSpecified.DEFAULT);
 			}
 
