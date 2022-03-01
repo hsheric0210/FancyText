@@ -55,7 +55,8 @@ public final class Launch
 
 		if (!System.getProperty("java.version").startsWith("1.")) // Java version 8 and older doesn't support '--add-opens' parameter
 		{
-			cmd.add("--add-opens"); // Workaround of InaccessibleObjectException in ClipboardAnalyzer which caused since Java 9 and later
+			// Workaround for InaccessibleObjectException in ClipboardAnalyzer since Java 9 and later
+			cmd.add("--add-opens");
 			cmd.add("java.datatransfer/java.awt.datatransfer=ALL-UNNAMED");
 		}
 

@@ -74,7 +74,7 @@ public final class SymmetricKeyCipher extends JPanel
 		// Encrypt button
 		final JButton encryptButton = new JButton("Encrypt");
 
-		plainTextPanel = new EncodedIOPanel("Plain-text", Encoding.UTF_8);
+		plainTextPanel = new EncodedIOPanel("Plain-text", "From/To ",Encoding.UTF_8);
 		final GridBagConstraints gbc_plainPanel = new GridBagConstraints();
 		gbc_plainPanel.gridwidth = 4;
 		gbc_plainPanel.insets = new Insets(0, 0, 5, 0);
@@ -241,7 +241,7 @@ public final class SymmetricKeyCipher extends JPanel
 		add(encryptButton, gbc_encryptButton);
 
 		// Key-text field panel
-		keyPanel = new EncodedIOPanel("Cipher Key", Encoding.UTF_8);
+		keyPanel = new EncodedIOPanel("Cipher Key", "From ",Encoding.UTF_8);
 		final GridBagConstraints gbc_keyTextFieldPanel = new GridBagConstraints();
 		gbc_keyTextFieldPanel.insets = new Insets(0, 0, 5, 5);
 		gbc_keyTextFieldPanel.fill = GridBagConstraints.BOTH;
@@ -259,7 +259,7 @@ public final class SymmetricKeyCipher extends JPanel
 		add(decryptButton, gbc_decryptButton);
 
 		// IV-text/Counter-text field panel
-		ivPanel = new EncodedIOPanel("Cipher Initial Vector", Encoding.UTF_8);
+		ivPanel = new EncodedIOPanel("Cipher Initial Vector", "From ",Encoding.UTF_8);
 		final GridBagConstraints gbc_ivTextFieldPanel = new GridBagConstraints();
 		gbc_ivTextFieldPanel.insets = new Insets(0, 0, 5, 5);
 		gbc_ivTextFieldPanel.fill = GridBagConstraints.BOTH;
@@ -311,7 +311,7 @@ public final class SymmetricKeyCipher extends JPanel
 		((PlainDocumentWithLimit) paddingCharField.getDocument()).setLimit(1);
 		paddingCharField.setText("+");
 
-		cipherTextPanel = new EncodedIOPanel("Cipher-text", Encoding.BASE64);
+		cipherTextPanel = new EncodedIOPanel("Cipher-text", "From/To ",Encoding.BASE64);
 		cipherTextPanel.setBorder(new TitledBorder(null, "Encrypted message", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		final GridBagConstraints gbc_encryptedPanel = new GridBagConstraints();
 		gbc_encryptedPanel.gridwidth = 4;

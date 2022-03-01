@@ -23,7 +23,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
 import fancytext.gui.ClipboardAnalyzer;
-import fancytext.gui.encode.Base64Coder;
+import fancytext.gui.encode.Encoder;
 import fancytext.gui.Hasher;
 import fancytext.gui.encrypt.PublicKeyCipher;
 import fancytext.gui.encrypt.SymmetricKeyCipher;
@@ -54,24 +54,24 @@ public final class Main extends JFrame
 	{
 		EventQueue.invokeLater(() ->
 		{
+			// <editor-fold desc="Look-and-Feel setup">
 			try
 			{
-				// <editor-fold desc="Look-and-Feel setup">
-				try
-				{
-					UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-				}
-				catch (final ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException e)
-				{
-					exceptionMessageBox("Look-and-Feel setup failed", null, e);
-				}
-				// </editor-fold>
+				UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+			}
+			catch (final ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException e)
+			{
+				exceptionMessageBox("Look-and-Feel setup failed", null, e);
+			}
+			// </editor-fold>
 
+			try
+			{
 				mainFrame = new Main();
 			}
 			catch (final Throwable t)
 			{
-				exceptionMessageBox(t.getClass().getCanonicalName(), null, t);
+				exceptionMessageBox(t.getClass().getCanonicalName(), "Main window initialization failed", t);
 			}
 		});
 	}
@@ -159,13 +159,15 @@ public final class Main extends JFrame
 			scroll.getHorizontalScrollBar().setUnitIncrement(scrollSize);
 			scroll.getVerticalScrollBar().setUnitIncrement(scrollSize);
 			EventQueue.invokeLater(() -> tabs.addTab("Translater", scroll));
+			LOGGER.info("Translater tab loaded");
 		});
 		tasks.add(() ->
 		{
-			final JScrollPane scroll = new JScrollPane(new Base64Coder());
+			final JScrollPane scroll = new JScrollPane(new Encoder());
 			scroll.getHorizontalScrollBar().setUnitIncrement(scrollSize);
 			scroll.getVerticalScrollBar().setUnitIncrement(scrollSize);
 			EventQueue.invokeLater(() -> tabs.addTab("Base64 Coder", scroll));
+			LOGGER.info("Base64 coder tab loaded");
 		});
 		tasks.add(() ->
 		{
@@ -173,6 +175,7 @@ public final class Main extends JFrame
 			scroll.getHorizontalScrollBar().setUnitIncrement(scrollSize);
 			scroll.getVerticalScrollBar().setUnitIncrement(scrollSize);
 			EventQueue.invokeLater(() -> tabs.addTab("Symmetric-key Algorithm Cipher", scroll));
+			LOGGER.info("Symmetric-key algorithm cipher tab loaded");
 		});
 		tasks.add(() ->
 		{
@@ -180,6 +183,7 @@ public final class Main extends JFrame
 			scroll.getHorizontalScrollBar().setUnitIncrement(scrollSize);
 			scroll.getVerticalScrollBar().setUnitIncrement(scrollSize);
 			EventQueue.invokeLater(() -> tabs.addTab("Public-key Algorithm Cipher", scroll));
+			LOGGER.info("Public-key algorithm cipher tab loaded");
 		});
 		tasks.add(() ->
 		{
@@ -187,13 +191,15 @@ public final class Main extends JFrame
 			scroll.getHorizontalScrollBar().setUnitIncrement(scrollSize);
 			scroll.getVerticalScrollBar().setUnitIncrement(scrollSize);
 			EventQueue.invokeLater(() -> tabs.addTab("Hasher", scroll));
+			LOGGER.info("Hasher tab loaded");
 		});
 		tasks.add(() ->
 		{
 			final JScrollPane scroll = new JScrollPane(new ClipboardAnalyzer());
 			scroll.getHorizontalScrollBar().setUnitIncrement(scrollSize);
 			scroll.getVerticalScrollBar().setUnitIncrement(scrollSize);
-			EventQueue.invokeLater(() -> tabs.addTab("Clipboard DataFlavor Analyzer", scroll));
+			EventQueue.invokeLater(() -> tabs.addTab("Clipboard Analyzer", scroll));
+			LOGGER.info("ClipboardAnalysis tab loaded");
 		});
 
 		MultiThreading.submitRunnables(tasks);

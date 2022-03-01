@@ -18,14 +18,14 @@ public class EncodedIOPanel extends JPanel
 {
 	private final EncodingPanel encodingPanel;
 	private final JPanel textPanel;
-	private final JRadioButton textButton;
-	private final JTextArea textArea;
+	public final JRadioButton textButton;
+	public final JTextArea textArea;
 	private final JPanel filePanel;
 	private final JRadioButton fileButton;
 	private final JTextField fileNameField;
 	private final JButton fileFindButton;
 
-	public EncodedIOPanel(final String title, final Encoding defaultEncoding)
+	public EncodedIOPanel(final String title, final String prefix, final Encoding defaultEncoding)
 	{
 		setBorder(BorderFactory.createTitledBorder(null, title, TitledBorder.LEADING, TitledBorder.TOP));
 		final GridBagLayout layout = new GridBagLayout();
@@ -58,7 +58,7 @@ public class EncodedIOPanel extends JPanel
 		add(encodingPanel, encodingPanelConstraints);
 
 		textPanel = new JPanel();
-		textPanel.setBorder(BorderFactory.createTitledBorder(null, "From/To Text", TitledBorder.LEADING, TitledBorder.TOP));
+		textPanel.setBorder(BorderFactory.createTitledBorder(null, prefix + "Text", TitledBorder.LEADING, TitledBorder.TOP));
 		final GridBagConstraints gbc_textPanel = new GridBagConstraints();
 		gbc_textPanel.insets = new Insets(0, 0, 5, 0);
 		gbc_textPanel.fill = GridBagConstraints.BOTH;
@@ -79,7 +79,7 @@ public class EncodedIOPanel extends JPanel
 		textScroll.setViewportView(textArea);
 
 		filePanel = new JPanel();
-		filePanel.setBorder(BorderFactory.createTitledBorder(null, "From/To File", TitledBorder.LEADING, TitledBorder.TOP));
+		filePanel.setBorder(BorderFactory.createTitledBorder(null, prefix + "File", TitledBorder.LEADING, TitledBorder.TOP));
 		final GridBagConstraints gbc_filePanel = new GridBagConstraints();
 		gbc_filePanel.fill = GridBagConstraints.BOTH;
 		gbc_filePanel.gridx = 1;

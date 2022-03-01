@@ -58,7 +58,7 @@ public final class Hasher extends JPanel
 		};
 		setLayout(gridBagLayout);
 
-		inputPanel = new EncodedIOPanel("Plain-text input", Encoding.UTF_8);
+		inputPanel = new EncodedIOPanel("Plain-text input", "From ", Encoding.UTF_8);
 		final GridBagConstraints gbc_inputPanel = new GridBagConstraints();
 		gbc_inputPanel.insets = new Insets(0, 0, 5, 0);
 		gbc_inputPanel.fill = GridBagConstraints.BOTH;
@@ -234,7 +234,7 @@ public final class Hasher extends JPanel
 		gbc_hashDigestSizeBitsLabel.gridy = 0;
 		hashDigestSizeBitsPanel.add(hashDigestSizeBitsLabel, gbc_hashDigestSizeBitsLabel);
 
-		hashOutputPanel = new EncodedIOPanel("Hash output", Encoding.HEXADECIMAL);
+		hashOutputPanel = new EncodedIOPanel("Hash output", "To ", Encoding.HEXADECIMAL);
 		final GridBagConstraints gbc_hashOutputPanel = new GridBagConstraints();
 		gbc_hashOutputPanel.fill = GridBagConstraints.BOTH;
 		gbc_hashOutputPanel.gridx = 0;

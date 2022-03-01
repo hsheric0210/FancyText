@@ -10,7 +10,6 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.StandardOpenOption;
 import java.util.Base64;
 import java.util.Base64.Decoder;
-import java.util.Base64.Encoder;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
@@ -21,7 +20,7 @@ import fancytext.Main;
 import fancytext.utils.encoding.Encoding;
 import fancytext.utils.MultiThreading;
 
-public final class Base64Coder extends JPanel
+public final class Encoder extends JPanel
 {
 	private static final long serialVersionUID = -5074560595722321177L;
 
@@ -57,10 +56,10 @@ public final class Base64Coder extends JPanel
 		}
 	}
 
-	public Base64Coder()
+	public Encoder()
 	{
 		// Main border setup
-		setBorder(new TitledBorder(null, "Base64 Converter", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
+		setBorder(new TitledBorder(null, "Encoder", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
 
 		// Main layout setup
 		final GridBagLayout gridBagLayout = new GridBagLayout();
@@ -84,7 +83,7 @@ public final class Base64Coder extends JPanel
 
 		// Plain-text input/output field panel
 		final JPanel plainPanel = new JPanel();
-		plainPanel.setBorder(new TitledBorder(null, "Plain(Decoded) message", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
+		plainPanel.setBorder(new TitledBorder(null, "Plain message", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
 		final GridBagConstraints gbc_plainPanel = new GridBagConstraints();
 		gbc_plainPanel.gridwidth = 2;
 		gbc_plainPanel.insets = new Insets(0, 0, 5, 0);
@@ -112,7 +111,7 @@ public final class Base64Coder extends JPanel
 		plainPanel.setLayout(gbl_plainPanel);
 
 		final JPanel plainTextPanel = new JPanel();
-		plainTextPanel.setBorder(new TitledBorder(null, "Plain-text (Decoded-text)", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		plainTextPanel.setBorder(new TitledBorder(null, "Plain-text", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		final GridBagConstraints gbc_plainTextPanel = new GridBagConstraints();
 		gbc_plainTextPanel.ipady = 40;
 		gbc_plainTextPanel.insets = new Insets(0, 0, 5, 0);
@@ -140,7 +139,7 @@ public final class Base64Coder extends JPanel
 		};
 		plainTextPanel.setLayout(gbl_plainTextPanel);
 
-		plainFromToTextButton = new JRadioButton("Input the message from the text field / Output the decoded-message to the text field");
+		plainFromToTextButton = new JRadioButton("From File");
 		final GridBagConstraints gbc_plainFromToTextButton = new GridBagConstraints();
 		gbc_plainFromToTextButton.anchor = GridBagConstraints.LINE_START;
 		gbc_plainFromToTextButton.gridheight = 2;
@@ -158,7 +157,7 @@ public final class Base64Coder extends JPanel
 		gbc_plainTextCharsetPanel.gridx = 1;
 		gbc_plainTextCharsetPanel.gridy = 0;
 		plainTextPanel.add(plainTextCharsetPanel, gbc_plainTextCharsetPanel);
-		plainTextCharsetPanel.setBorder(new TitledBorder(null, "Charset", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		plainTextCharsetPanel.setBorder(new TitledBorder(null, "Encoding", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		final GridBagLayout gbl_plainTextCharsetPanel = new GridBagLayout();
 		gbl_plainTextCharsetPanel.columnWidths = new int[]
 		{
@@ -199,7 +198,7 @@ public final class Base64Coder extends JPanel
 		plainTextScrollPane.setViewportView(plainTextField);
 
 		final JPanel plainFilePanel = new JPanel();
-		plainFilePanel.setBorder(new TitledBorder(null, "Plain-file (Decoded-file)", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
+		plainFilePanel.setBorder(new TitledBorder(null, "Plain (or Decoded) file", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
 		final GridBagConstraints gbc_plainFilePanel = new GridBagConstraints();
 		gbc_plainFilePanel.fill = GridBagConstraints.BOTH;
 		gbc_plainFilePanel.gridx = 0;
@@ -840,7 +839,7 @@ public final class Base64Coder extends JPanel
 		if (plainBytes == null || plainBytes.length == 0)
 			return null;
 
-		Encoder encoder;
+		Base64.Encoder encoder;
 		switch (Optional.ofNullable((Base64Mode) base64ModeCB.getSelectedItem()).orElse(Base64Mode.DEFAULT))
 		{
 			case MIME:
