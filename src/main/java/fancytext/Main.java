@@ -166,8 +166,8 @@ public final class Main extends JFrame
 			final JScrollPane scroll = new JScrollPane(new Encoder());
 			scroll.getHorizontalScrollBar().setUnitIncrement(scrollSize);
 			scroll.getVerticalScrollBar().setUnitIncrement(scrollSize);
-			EventQueue.invokeLater(() -> tabs.addTab("Base64 Coder", scroll));
-			LOGGER.info("Base64 coder tab loaded");
+			EventQueue.invokeLater(() -> tabs.addTab("Encoder", scroll));
+			LOGGER.info("Encoder tab loaded");
 		});
 		tasks.add(() ->
 		{

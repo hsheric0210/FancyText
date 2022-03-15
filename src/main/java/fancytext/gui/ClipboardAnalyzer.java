@@ -239,6 +239,8 @@ public final class ClipboardAnalyzer extends JPanel
 			dataFlavorTable.getColumnModel().getColumn(0).setPreferredWidth(400);
 			dataFlavorTable.getColumnModel().getColumn(0).setMinWidth(200);
 
+			dataFlavorTable.setAutoCreateRowSorter(true);
+
 			dataFlavorTable.updateUI();
 			// </editor-fold>
 		}

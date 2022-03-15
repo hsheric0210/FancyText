@@ -9,12 +9,10 @@ import javax.swing.event.DocumentListener;
 
 import fancytext.Main;
 import fancytext.gui.EncodedIOPanel;
+import fancytext.utils.StackTraceToString;
 import fancytext.utils.encoding.Encoding;
 import fancytext.utils.MultiThreading;
 import fancytext.utils.encoding.HexEncoder;
-
-import java.awt.event.InputMethodListener;
-import java.awt.event.InputMethodEvent;
 
 public final class Encoder extends JPanel
 {
@@ -134,11 +132,34 @@ public final class Encoder extends JPanel
 			if (realtimeEncodeCB.isSelected())
 				doEncode();
 		});
+
+		plainPanel.textButton.addActionListener(a ->
+		{
+			realtimeEncodeCB.setEnabled(isRealtimeEncodeAvailable());
+			if (isRealtimeEncode())
+				doEncode();
+		});
+
+		plainPanel.fileButton.addActionListener(a -> realtimeEncodeCB.setEnabled(isRealtimeEncodeAvailable()));
+
+		encodedPanel.textButton.addActionListener(a ->
+		{
+			realtimeEncodeCB.setEnabled(isRealtimeEncodeAvailable());
+			if (isRealtimeEncode())
+				doEncode();
+		});
+
+		encodedPanel.fileButton.addActionListener(a -> realtimeEncodeCB.setEnabled(isRealtimeEncodeAvailable()));
+	}
+
+	boolean isRealtimeEncodeAvailable()
+	{
+		return plainPanel.textButton.isSelected() && encodedPanel.textButton.isSelected();
 	}
 
 	boolean isRealtimeEncode()
 	{
-		return realtimeEncodeCB.isSelected() && plainPanel.textButton.isSelected() && encodedPanel.textButton.isSelected();
+		return isRealtimeEncodeAvailable() && realtimeEncodeCB.isSelected();
 	}
 
 	void doEncode()
@@ -148,14 +169,14 @@ public final class Encoder extends JPanel
 
 		MultiThreading.getDefaultWorkers().submit(() ->
 		{
-			doSave(updateIntermediate(getInputBytes()));
+			printOutput(updateIntermediate(readInput()));
 
 			encodeButton.setEnabled(true);
 			Main.setBusyCursor(this, false);
 		});
 	}
 
-	private byte[] getInputBytes()
+	private byte[] readInput()
 	{
 		try
 		{
@@ -164,7 +185,7 @@ public final class Encoder extends JPanel
 		catch (final Throwable e)
 		{
 			if (isRealtimeEncode())
-				encodedPanel.textArea.setText("Failed to read plain-text: " + e);
+				encodedPanel.textArea.setText("Failed to read plain-text: " + StackTraceToString.convert(e));
 			else
 				Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while reading, parsing and decoding input", e);
 			return null;
@@ -174,18 +195,21 @@ public final class Encoder extends JPanel
 	public byte[] updateIntermediate(final byte[] input)
 	{
 		if (input != null)
-			try
-			{
-				intermediateText.setText(Encoding.HEXADECIMAL.encode(input, " ", HexEncoder.HEX_UPPERCASE));
-			}
-			catch (final Throwable e)
-			{
-				intermediateText.setText("Failed to encode intermediate text!");
-			}
+			if (input.length > 256)
+				intermediateText.setText("Intermediate byte-array is too large; not displayed");
+			else
+				try
+				{
+					intermediateText.setText(Encoding.HEXADECIMAL.encode(input, " ", HexEncoder.HEX_UPPERCASE));
+				}
+				catch (final Throwable e)
+				{
+					intermediateText.setText("Failed to encode intermediate text: " + StackTraceToString.convert(e));
+				}
 		return input;
 	}
 
-	private void doSave(final byte[] bytes)
+	private void printOutput(final byte[] bytes)
 	{
 		if (bytes == null)
 			return;
@@ -197,7 +221,7 @@ public final class Encoder extends JPanel
 		catch (final Throwable e)
 		{
 			if (isRealtimeEncode())
-				encodedPanel.textArea.setText("Failed to encode: " + e);
+				encodedPanel.textArea.setText("Failed to write encoded text: " + StackTraceToString.convert(e));
 			else
 				Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while encoding and writing output", e);
 		}

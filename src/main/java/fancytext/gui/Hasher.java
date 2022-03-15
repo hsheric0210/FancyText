@@ -5,6 +5,8 @@ import java.util.Optional;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 import fancytext.Main;
 import fancytext.hash.AbstractHash;
@@ -18,6 +20,7 @@ import fancytext.hash.digest.RIPEMDAndSHAKEDigest;
 import fancytext.hash.digest.SkeinDigest;
 import fancytext.hash.digest.SpiBasedDigest;
 import fancytext.utils.MultiThreading;
+import fancytext.utils.StackTraceToString;
 import fancytext.utils.encoding.Encoding;
 
 public final class Hasher extends JPanel
@@ -29,6 +32,7 @@ public final class Hasher extends JPanel
 	private final JComboBox<Integer> hashStateSizeBitsCB;
 	private final EncodedIOPanel inputPanel;
 	private final EncodedIOPanel hashOutputPanel;
+	final JCheckBox realtimeHashCB;
 
 	public Hasher()
 	{
@@ -78,7 +82,7 @@ public final class Hasher extends JPanel
 		final GridBagLayout gbl_hashSettingsPanel = new GridBagLayout();
 		gbl_hashSettingsPanel.columnWidths = new int[]
 		{
-				0, 0, 0, 0
+				0, 0, 0, 0, 0
 		};
 		gbl_hashSettingsPanel.rowHeights = new int[]
 		{
@@ -86,7 +90,7 @@ public final class Hasher extends JPanel
 		};
 		gbl_hashSettingsPanel.columnWeights = new double[]
 		{
-				0.0, 0.0, 0.0, Double.MIN_VALUE
+				0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE
 		};
 		gbl_hashSettingsPanel.rowWeights = new double[]
 		{
@@ -180,6 +184,7 @@ public final class Hasher extends JPanel
 		final JPanel hashDigestSizeBitsPanel = new JPanel();
 		hashDigestSizeBitsPanel.setBorder(new TitledBorder(null, "Hash digest size bits", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
 		final GridBagConstraints gbc_hashSizeBitsPanel = new GridBagConstraints();
+		gbc_hashSizeBitsPanel.insets = new Insets(0, 0, 0, 5);
 		gbc_hashSizeBitsPanel.ipadx = 100;
 		gbc_hashSizeBitsPanel.fill = GridBagConstraints.BOTH;
 		gbc_hashSizeBitsPanel.gridx = 2;
@@ -233,6 +238,12 @@ public final class Hasher extends JPanel
 		gbc_hashDigestSizeBitsLabel.gridx = 1;
 		gbc_hashDigestSizeBitsLabel.gridy = 0;
 		hashDigestSizeBitsPanel.add(hashDigestSizeBitsLabel, gbc_hashDigestSizeBitsLabel);
+
+		realtimeHashCB = new JCheckBox("Real-time Hash");
+		final GridBagConstraints gbc_realtimeHashCB = new GridBagConstraints();
+		gbc_realtimeHashCB.gridx = 3;
+		gbc_realtimeHashCB.gridy = 0;
+		hashSettingsPanel.add(realtimeHashCB, gbc_realtimeHashCB);
 
 		hashOutputPanel = new EncodedIOPanel("Hash output", "To ", Encoding.HEXADECIMAL);
 		final GridBagConstraints gbc_hashOutputPanel = new GridBagConstraints();
@@ -341,7 +352,7 @@ public final class Hasher extends JPanel
 					if (doSave(doHash(getInputBytes())))
 						Main.notificationMessageBox("Successfully hashed!", "Successfully hashed the message!", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null);
 				}
-				catch(final Throwable ex)
+				catch (final Throwable ex)
 				{
 					Main.exceptionMessageBox("Exception while digestion", "An exception occurred while digestion.", ex);
 				}
@@ -356,21 +367,97 @@ public final class Hasher extends JPanel
 				}
 			});
 		});
+
+		inputPanel.textArea.getDocument().addDocumentListener(new DocumentListener()
+		{
+			@Override
+			public void insertUpdate(final DocumentEvent e)
+			{
+				if (isRealtimeEncode())
+					realtimeUpdate();
+			}
+
+			@Override
+			public void removeUpdate(final DocumentEvent e)
+			{
+				if (isRealtimeEncode())
+					realtimeUpdate();
+			}
+
+			@Override
+			public void changedUpdate(final DocumentEvent e)
+			{
+				if (isRealtimeEncode())
+					realtimeUpdate();
+			}
+		});
+
+		realtimeHashCB.addActionListener(a ->
+		{
+			if (realtimeHashCB.isSelected())
+				realtimeUpdate();
+		});
+
+		inputPanel.textButton.addActionListener(a ->
+		{
+			realtimeHashCB.setEnabled(isRealtimeEncodeAvailable());
+			if (isRealtimeEncode())
+				realtimeUpdate();
+		});
+
+		inputPanel.fileButton.addActionListener(a -> realtimeHashCB.setEnabled(isRealtimeEncodeAvailable()));
+
+		hashOutputPanel.textButton.addActionListener(a ->
+		{
+			realtimeHashCB.setEnabled(isRealtimeEncodeAvailable());
+			if (isRealtimeEncode())
+				realtimeUpdate();
+		});
+
+		hashOutputPanel.fileButton.addActionListener(a -> realtimeHashCB.setEnabled(isRealtimeEncodeAvailable()));
+
 		// </editor-fold>
+	}
+
+	boolean isRealtimeEncode()
+	{
+		return realtimeHashCB.isSelected() && isRealtimeEncodeAvailable();
+	}
+
+	boolean isRealtimeEncodeAvailable()
+	{
+		return inputPanel.textButton.isSelected() && hashOutputPanel.textButton.isSelected();
 	}
 
 	private byte[] getInputBytes()
 	{
-
 		try
 		{
 			return inputPanel.read();
 		}
 		catch (final Throwable e)
 		{
-			Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while reading, parsing and decoding input", e);
+			if (isRealtimeEncode())
+				hashOutputPanel.textArea.setText("Failed to read plain-text: " + StackTraceToString.convert(e));
+			else
+				Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while reading, parsing and decoding input", e);
 			return null;
 		}
+	}
+
+	void realtimeUpdate()
+	{
+		MultiThreading.getDefaultWorkers().submit(() ->
+		{
+			try
+			{
+				doSave(doHash(getInputBytes()));
+			}
+			catch (final Throwable e)
+			{
+				hashOutputPanel.textArea.setText("Failed to hash: " + StackTraceToString.convert(e));
+			}
+		});
 	}
 
 	private boolean doSave(final byte[] bytes)
@@ -382,7 +469,10 @@ public final class Hasher extends JPanel
 		}
 		catch (final Throwable e)
 		{
-			Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while encoding and writing output", e);
+			if (isRealtimeEncode())
+				hashOutputPanel.textArea.setText("Failed to write hash: " + StackTraceToString.convert(e));
+			else
+				Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while encoding and writing output", e);
 			return false;
 		}
 	}

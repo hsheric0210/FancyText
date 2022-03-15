@@ -21,7 +21,7 @@ public class EncodedIOPanel extends JPanel
 	public final JRadioButton textButton;
 	public final JTextArea textArea;
 	private final JPanel filePanel;
-	private final JRadioButton fileButton;
+	public final JRadioButton fileButton;
 	private final JTextField fileNameField;
 	private final JButton fileFindButton;
 
