@@ -1014,12 +1014,8 @@ public final class SymmetricKeyCipher extends JPanel
 			return null;
 
 
-		byte[] paddedKey = CipherHelper.pad(key, minKeyLength, maxKeyLength, paddingByte);
-		// TODO
-		// if (!Arrays.equals(key, paddedKey))
-		// EventQueue.invokeLater(() -> keyTextActualLabel.setText("Actual value is \"" + paddedKeyString + "\""));
-		Main.LOGGER.warning("Padded Key: " + new String(paddedKey) + " [" + paddedKey.length + "]");
-
+		final byte[] paddedKey = CipherHelper.pad(key, minKeyLength, maxKeyLength, paddingByte);
+		// Main.LOGGER.warning("Padded Key: " + new String(paddedKey) + " [" + paddedKey.length + "]");
 		return paddedKey;
 	}
 
