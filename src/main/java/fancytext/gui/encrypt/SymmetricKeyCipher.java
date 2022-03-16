@@ -18,9 +18,13 @@ import fancytext.encrypt.symmetric.cipher.lea.LEACipher;
 import fancytext.encrypt.symmetric.cipher.rijndael.RijndaelAEADCipher;
 import fancytext.encrypt.symmetric.cipher.rijndael.RijndaelCipher;
 import fancytext.encrypt.symmetric.cipher.spiBased.*;
+import fancytext.exceptions.InputReadException;
+import fancytext.exceptions.OutputWriteException;
 import fancytext.gui.EncodedIOPanel;
 import fancytext.utils.MultiThreading;
 import fancytext.utils.PlainDocumentWithLimit;
+import fancytext.utils.SimpleDocumentListener;
+import fancytext.utils.StackTraceToString;
 import fancytext.utils.encoding.Encoding;
 
 public final class SymmetricKeyCipher extends JPanel
@@ -42,6 +46,9 @@ public final class SymmetricKeyCipher extends JPanel
 	private final EncodedIOPanel keyPanel;
 	private final EncodedIOPanel ivPanel;
 	private final EncodedIOPanel cipherTextPanel;
+	private final JCheckBox realtimeUpdateCB;
+	private final JRadioButton realtimeEncryptionCB;
+	private final JRadioButton realtimeDecryptionCB;
 
 	public SymmetricKeyCipher()
 	{
@@ -59,7 +66,7 @@ public final class SymmetricKeyCipher extends JPanel
 		};
 		gridBagLayout.rowHeights = new int[]
 		{
-				0, 0, 0, 0, 0, 0
+				0, 0, 0, 0, 0
 		};
 		gridBagLayout.columnWeights = new double[]
 		{
@@ -67,14 +74,14 @@ public final class SymmetricKeyCipher extends JPanel
 		};
 		gridBagLayout.rowWeights = new double[]
 		{
-				0.0, 0.0, 0.0, 0.0, 0.0, 1.0
+				1.0, 0.0, 0.0, 0.0, 1.0
 		};
 		setLayout(gridBagLayout);
 
 		// Encrypt button
 		final JButton encryptButton = new JButton("Encrypt");
 
-		plainTextPanel = new EncodedIOPanel("Plain-text", "From/To ",Encoding.UTF_8);
+		plainTextPanel = new EncodedIOPanel("Plain-text", "From/To ", Encoding.UTF_8);
 		final GridBagConstraints gbc_plainPanel = new GridBagConstraints();
 		gbc_plainPanel.gridwidth = 4;
 		gbc_plainPanel.insets = new Insets(0, 0, 5, 0);
@@ -83,16 +90,44 @@ public final class SymmetricKeyCipher extends JPanel
 		gbc_plainPanel.gridy = 0;
 		add(plainTextPanel, gbc_plainPanel);
 
+		final JPanel optionsPanel = new JPanel();
+		optionsPanel.setBorder(new TitledBorder(null, "Options", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		final GridBagConstraints gbc_optionsPanel = new GridBagConstraints();
+		gbc_optionsPanel.gridwidth = 3;
+		gbc_optionsPanel.insets = new Insets(0, 0, 5, 5);
+		gbc_optionsPanel.fill = GridBagConstraints.BOTH;
+		gbc_optionsPanel.gridx = 0;
+		gbc_optionsPanel.gridy = 1;
+		add(optionsPanel, gbc_optionsPanel);
+		final GridBagLayout gbl_optionsPanel = new GridBagLayout();
+		gbl_optionsPanel.columnWidths = new int[]
+		{
+				0, 0, 0
+		};
+		gbl_optionsPanel.rowHeights = new int[]
+		{
+				0, 0
+		};
+		gbl_optionsPanel.columnWeights = new double[]
+		{
+				0.0, 0.0, Double.MIN_VALUE
+		};
+		gbl_optionsPanel.rowWeights = new double[]
+		{
+				0.0, Double.MIN_VALUE
+		};
+		optionsPanel.setLayout(gbl_optionsPanel);
+
 		// Cipher settings panel
 		final JPanel cipherSettingsPanel = new JPanel();
-		cipherSettingsPanel.setBorder(new TitledBorder(null, "Cipher settings", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		cipherSettingsPanel.setBorder(new TitledBorder(null, "Cipher options", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		final GridBagConstraints gbc_cipherSettingsPanel = new GridBagConstraints();
-		gbc_cipherSettingsPanel.gridwidth = 4;
-		gbc_cipherSettingsPanel.insets = new Insets(0, 0, 5, 0);
-		gbc_cipherSettingsPanel.fill = GridBagConstraints.BOTH;
+		gbc_cipherSettingsPanel.anchor = GridBagConstraints.PAGE_START;
+		gbc_cipherSettingsPanel.fill = GridBagConstraints.HORIZONTAL;
+		gbc_cipherSettingsPanel.insets = new Insets(0, 0, 0, 5);
 		gbc_cipherSettingsPanel.gridx = 0;
-		gbc_cipherSettingsPanel.gridy = 1;
-		add(cipherSettingsPanel, gbc_cipherSettingsPanel);
+		gbc_cipherSettingsPanel.gridy = 0;
+		optionsPanel.add(cipherSettingsPanel, gbc_cipherSettingsPanel);
 		final GridBagLayout gbl_cipherSettingsPanel = new GridBagLayout();
 		gbl_cipherSettingsPanel.columnWidths = new int[]
 		{
@@ -234,6 +269,7 @@ public final class SymmetricKeyCipher extends JPanel
 		gbc_cipherOperationModeCB.gridx = 0;
 		gbc_cipherOperationModeCB.gridy = 0;
 		cipherAlgorithmModePanel.add(cipherAlgorithmModeCB, gbc_cipherOperationModeCB);
+
 		final GridBagConstraints gbc_encryptButton = new GridBagConstraints();
 		gbc_encryptButton.insets = new Insets(0, 0, 5, 5);
 		gbc_encryptButton.gridx = 0;
@@ -241,7 +277,7 @@ public final class SymmetricKeyCipher extends JPanel
 		add(encryptButton, gbc_encryptButton);
 
 		// Key-text field panel
-		keyPanel = new EncodedIOPanel("Cipher Key", "From ",Encoding.UTF_8);
+		keyPanel = new EncodedIOPanel("Cipher Key", "From ", Encoding.UTF_8);
 		final GridBagConstraints gbc_keyTextFieldPanel = new GridBagConstraints();
 		gbc_keyTextFieldPanel.insets = new Insets(0, 0, 5, 5);
 		gbc_keyTextFieldPanel.fill = GridBagConstraints.BOTH;
@@ -259,7 +295,7 @@ public final class SymmetricKeyCipher extends JPanel
 		add(decryptButton, gbc_decryptButton);
 
 		// IV-text/Counter-text field panel
-		ivPanel = new EncodedIOPanel("Cipher Initial Vector", "From ",Encoding.UTF_8);
+		ivPanel = new EncodedIOPanel("Cipher Initial Vector", "From ", Encoding.UTF_8);
 		final GridBagConstraints gbc_ivTextFieldPanel = new GridBagConstraints();
 		gbc_ivTextFieldPanel.insets = new Insets(0, 0, 5, 5);
 		gbc_ivTextFieldPanel.fill = GridBagConstraints.BOTH;
@@ -311,11 +347,10 @@ public final class SymmetricKeyCipher extends JPanel
 		((PlainDocumentWithLimit) paddingCharField.getDocument()).setLimit(1);
 		paddingCharField.setText("+");
 
-		cipherTextPanel = new EncodedIOPanel("Cipher-text", "From/To ",Encoding.BASE64);
+		cipherTextPanel = new EncodedIOPanel("Cipher-text", "From/To ", Encoding.BASE64);
 		cipherTextPanel.setBorder(new TitledBorder(null, "Encrypted message", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		final GridBagConstraints gbc_encryptedPanel = new GridBagConstraints();
 		gbc_encryptedPanel.gridwidth = 4;
-		gbc_encryptedPanel.insets = new Insets(0, 0, 5, 0);
 		gbc_encryptedPanel.fill = GridBagConstraints.BOTH;
 		gbc_encryptedPanel.gridx = 0;
 		gbc_encryptedPanel.gridy = 4;
@@ -552,6 +587,29 @@ public final class SymmetricKeyCipher extends JPanel
 		gbc_cipherAlgorithmModeAEADTagLenCB.gridy = 0;
 		cipherAlgorithmModeAEADTagLenPanel.add(cipherAlgorithmModeAEADTagLenCB, gbc_cipherAlgorithmModeAEADTagLenCB);
 
+		final JPanel realtimeUpdateOptionsPanel = new JPanel();
+		realtimeUpdateOptionsPanel.setBorder(new TitledBorder(null, "Real-time update", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		final GridBagConstraints gbc_miscOptionsPanel = new GridBagConstraints();
+		gbc_miscOptionsPanel.anchor = GridBagConstraints.PAGE_START;
+		gbc_miscOptionsPanel.fill = GridBagConstraints.HORIZONTAL;
+		gbc_miscOptionsPanel.gridx = 1;
+		gbc_miscOptionsPanel.gridy = 0;
+		optionsPanel.add(realtimeUpdateOptionsPanel, gbc_miscOptionsPanel);
+		realtimeUpdateOptionsPanel.setLayout(new BoxLayout(realtimeUpdateOptionsPanel, BoxLayout.PAGE_AXIS));
+
+		realtimeUpdateCB = new JCheckBox("Enable");
+		realtimeUpdateOptionsPanel.add(realtimeUpdateCB);
+
+		realtimeEncryptionCB = new JRadioButton("Real-time encryption");
+		realtimeEncryptionCB.setSelected(true);
+		realtimeEncryptionCB.setEnabled(false);
+		realtimeUpdateOptionsPanel.add(realtimeEncryptionCB);
+
+		realtimeDecryptionCB = new JRadioButton("Real-time decryption");
+		realtimeDecryptionCB.setEnabled(false);
+		realtimeUpdateOptionsPanel.add(realtimeDecryptionCB);
+		// </editor-fold>
+
 		keySizeCB.setModel(new DefaultComboBoxModel<>(new Integer[]
 		{
 				128, 192, 256
@@ -606,7 +664,13 @@ public final class SymmetricKeyCipher extends JPanel
 				keySize = algorithm.getMaxKeySize();
 
 			keyPanel.setTextLimit(keySize / 8);
+
+			realtimeUpdate();
 		});
+
+		final ButtonGroup realtimeUpdateBG = new ButtonGroup();
+		realtimeUpdateBG.add(realtimeEncryptionCB);
+		realtimeUpdateBG.add(realtimeDecryptionCB);
 
 		cipherAlgorithmCB.addActionListener(e ->
 		{
@@ -697,6 +761,8 @@ public final class SymmetricKeyCipher extends JPanel
 			final boolean isRijndael = newAlgorithm == CipherAlgorithm.Rijndael;
 			rijndaelBlockSizePanel.setEnabled(isRijndael);
 			rijndaelBlockSizeCB.setEnabled(isRijndael);
+
+			realtimeUpdate();
 		});
 
 		// Encrypt button lambda
@@ -710,8 +776,8 @@ public final class SymmetricKeyCipher extends JPanel
 			{
 				try
 				{
-					if (doSaveEncryptedBytes(doEncrypt(getPlainBytes())))
-						Main.notificationMessageBox("Successfully encrypted!", "Successfully encrypted the plain message!", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null);
+					writeCipherBytes(doEncrypt(readPlainBytes()));
+					Main.notificationMessageBox("Successfully encrypted!", "Successfully encrypted the plain message!", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null);
 				}
 				catch (final Throwable ex)
 				{
@@ -741,8 +807,8 @@ public final class SymmetricKeyCipher extends JPanel
 			{
 				try
 				{
-					if (doSavePlainBytes(doDecrypt(getEncryptedBytes())))
-						Main.notificationMessageBox("Successfully decrypted!", "Successfully decrypted the plain message!", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null);
+					writePlainBytes(doDecrypt(readCipherBytes()));
+					Main.notificationMessageBox("Successfully decrypted!", "Successfully decrypted the plain message!", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null);
 				}
 				catch (final Throwable ex)
 				{
@@ -788,77 +854,150 @@ public final class SymmetricKeyCipher extends JPanel
 				{
 						CipherPadding.NONE
 				}));
+
+			realtimeUpdate();
 		});
+
+		cipherAlgorithmPaddingCB.addActionListener(a -> realtimeUpdate());
+
+		realtimeUpdateCB.addActionListener(a ->
+		{
+			final boolean enabled = realtimeUpdateCB.isSelected();
+			realtimeEncryptionCB.setEnabled(enabled);
+			realtimeDecryptionCB.setEnabled(enabled);
+		});
+
+		plainTextPanel.textArea.getDocument().addDocumentListener(new SimpleDocumentListener(() ->
+		{
+			if (isRealtimeEncryptionEnabled())
+				realtimeEncrypt();
+		}));
+
+		cipherTextPanel.textArea.getDocument().addDocumentListener(new SimpleDocumentListener(() ->
+		{
+			if (isRealtimeDecryptionEnabled())
+				realtimeDecrypt();
+		}));
+
+		keyPanel.textArea.getDocument().addDocumentListener(new SimpleDocumentListener(this::realtimeUpdate));
+		ivPanel.textArea.getDocument().addDocumentListener(new SimpleDocumentListener(this::realtimeUpdate));
 		// </editor-fold>
 	}
 
-	private boolean doSavePlainBytes(final byte[] bytes)
+	private boolean isRealtimeUpdateAvailable()
 	{
-		if (bytes == null || bytes.length == 0)
-			return false;
+		return plainTextPanel.textButton.isSelected() && cipherTextPanel.textButton.isSelected() && keyPanel.textButton.isSelected() && (!ivPanel.isEnabled() || ivPanel.textButton.isSelected());
+	}
 
+	private boolean isRealtimeUpdateEnabled()
+	{
+		return isRealtimeUpdateAvailable() && realtimeUpdateCB.isSelected();
+	}
+
+	private boolean isRealtimeEncryptionEnabled()
+	{
+		return isRealtimeUpdateEnabled() && realtimeEncryptionCB.isSelected();
+	}
+
+	private boolean isRealtimeDecryptionEnabled()
+	{
+		return isRealtimeUpdateEnabled() && realtimeDecryptionCB.isSelected();
+	}
+
+	private void realtimeUpdate()
+	{
+		if (isRealtimeUpdateEnabled())
+			if (realtimeEncryptionCB.isSelected())
+				realtimeEncrypt();
+			else
+				realtimeDecrypt();
+	}
+
+	private void realtimeEncrypt()
+	{
+		MultiThreading.getDefaultWorkers().submit(() ->
+		{
+			try
+			{
+				writeCipherBytes(doEncrypt(readPlainBytes()));
+			}
+			catch (final Throwable ex)
+			{
+				cipherTextPanel.textArea.setText("Exception while encryption: " + StackTraceToString.convert(ex));
+			}
+		});
+	}
+
+	private void realtimeDecrypt()
+	{
+		MultiThreading.getDefaultWorkers().submit(() ->
+		{
+			try
+			{
+				writePlainBytes(doDecrypt(readCipherBytes()));
+			}
+			catch (final Throwable ex)
+			{
+				plainTextPanel.textArea.setText("Exception while decryption: " + StackTraceToString.convert(ex));
+			}
+		});
+	}
+
+	private void writePlainBytes(final byte[] bytes) throws OutputWriteException
+	{
 		try
 		{
 			plainTextPanel.write(bytes);
-			return true;
 		}
-		catch (final Throwable e)
+		catch (final Throwable t)
 		{
-			Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while encoding and writing plain-text", e);
-			return false;
+			throw new OutputWriteException(t);
 		}
 	}
 
-	private byte[] getPlainBytes()
+	private byte[] readPlainBytes() throws InputReadException
 	{
 		try
 		{
 			return plainTextPanel.read();
 		}
-		catch (final Throwable e)
+		catch (final Throwable t)
 		{
-			Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while reading, parsing and decoding plain-text", e);
-			return null;
+			throw new InputReadException(t);
 		}
 	}
 
-	private boolean doSaveEncryptedBytes(final byte[] bytes)
+	private void writeCipherBytes(final byte[] bytes) throws OutputWriteException
 	{
-		if (bytes == null || bytes.length == 0)
-			return false;
-
 		try
 		{
 			cipherTextPanel.write(bytes);
-			return true;
 		}
 		catch (final Throwable e)
 		{
-			Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while encoding and writing cipher-text", e);
-			return false;
+			throw new OutputWriteException(e);
 		}
 	}
 
-	private byte[] getEncryptedBytes()
+	private byte[] readCipherBytes() throws InputReadException
 	{
 		try
 		{
 			return cipherTextPanel.read();
 		}
-		catch (final Throwable e)
+		catch (final Throwable t)
 		{
-			Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while reading, parsing and decoding cipher-text", e);
-			return null;
+			throw new InputReadException(t);
 		}
 	}
 
-	private byte[] getKey(final CipherAlgorithm cipherAlgorithm, final byte paddingByte)
+	private byte[] getKey(final CipherAlgorithm cipherAlgorithm, final byte paddingByte) throws InputReadException
 	{
 		final int defaultKeyLength = cipherAlgorithm.getAvailableKeySizes() != null ? (int) Optional.ofNullable(keySizeCB.getSelectedItem()).orElse(256) / 8 : -1;
 		final int minKeySize = cipherAlgorithm.getMinKeySize();
 		final int maxKeySize = cipherAlgorithm.getMaxKeySize();
-		final int minKeyLength = minKeySize > 0 ? minKeySize : defaultKeyLength;
-		final int maxKeyLength = maxKeySize > 0 ? maxKeySize : defaultKeyLength;
+		final int minKeyLength = minKeySize > 0 ? minKeySize / 8 : defaultKeyLength;
+		final int maxKeyLength = maxKeySize > 0 ? maxKeySize / 8 : defaultKeyLength;
 
 		final byte[] key;
 
@@ -868,21 +1007,23 @@ public final class SymmetricKeyCipher extends JPanel
 		}
 		catch (final Throwable t)
 		{
-			Main.exceptionMessageBox(t.getClass().getCanonicalName(), "Exception occurred while reading, parsing and decoding key", t);
-			return null;
+			throw new InputReadException("key", t);
 		}
 
 		if (key == null || key.length <= 0)
 			return null;
 
+
+		byte[] paddedKey = CipherHelper.pad(key, minKeyLength, maxKeyLength, paddingByte);
 		// TODO
 		// if (!Arrays.equals(key, paddedKey))
 		// EventQueue.invokeLater(() -> keyTextActualLabel.setText("Actual value is \"" + paddedKeyString + "\""));
+		Main.LOGGER.warning("Padded Key: " + new String(paddedKey) + " [" + paddedKey.length + "]");
 
-		return CipherHelper.pad(key, minKeyLength, maxKeyLength, paddingByte);
+		return paddedKey;
 	}
 
-	private byte[] getInitialVector(final AbstractCipher cipher, final byte paddingByte)
+	private byte[] getInitialVector(final AbstractCipher cipher, final byte paddingByte) throws InputReadException
 	{
 		final byte[] iv;
 
@@ -892,8 +1033,7 @@ public final class SymmetricKeyCipher extends JPanel
 		}
 		catch (final Throwable t)
 		{
-			Main.exceptionMessageBox(t.getClass().getCanonicalName(), "Exception occurred while reading, parsing and decoding initial vector", t);
-			return null;
+			throw new InputReadException("IV (or Nonce)", t);
 		}
 
 		if (iv == null || iv.length <= 0)
@@ -953,7 +1093,7 @@ public final class SymmetricKeyCipher extends JPanel
 		return cipher;
 	}
 
-	byte[] doEncrypt(byte[] bytes) throws CipherException
+	byte[] doEncrypt(byte[] bytes) throws CipherException, InputReadException
 	{
 		requireNonEmpty(bytes, CipherExceptionType.EMPTY_INPUT);
 
@@ -977,7 +1117,7 @@ public final class SymmetricKeyCipher extends JPanel
 		return cipher.doFinal(bytes);
 	}
 
-	byte[] doDecrypt(byte[] bytes) throws CipherException
+	byte[] doDecrypt(byte[] bytes) throws CipherException, InputReadException
 	{
 		requireNonEmpty(bytes, CipherExceptionType.EMPTY_INPUT);
 

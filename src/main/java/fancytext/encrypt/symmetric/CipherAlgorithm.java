@@ -2,35 +2,38 @@ package fancytext.encrypt.symmetric;
 
 public enum CipherAlgorithm
 {
-	AES("AES", "Advanced Encryption Standard (a.k.a. AES)", 128, 96, 128, CipherMode.SUNJCE_DEFAULT, CipherPadding.SUNJCE_DEFAULT, "SunJCE", true, false, 128, 192, 256),
+	AES("AES", "AES: Advanced Encryption Standard", 128, 96, 128, CipherMode.SUNJCE_DEFAULT, CipherPadding.SUNJCE_DEFAULT, "SunJCE", true, false, 128, 192, 256),
 
 	BlowFish("Blowfish", "Blowfish", 64, 8, 448, 96, 128, CipherMode.SUNJCE_DEFAULT_NO_AEAD, CipherPadding.SUNJCE_DEFAULT, "SunJCE", true, false),
 	Twofish("Twofish", "Twofish", 128, 64, 256, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false),
-	Threefish("Threefish", "Threefish", -1,  96, 128, CipherMode.BC_DEFAULT_NO_AEAD, CipherPadding.BC_DEFAULT, "BC", true, false, 256, 512, 1024),
+	Threefish("Threefish", "Threefish", -1, 96, 128, CipherMode.BC_DEFAULT_NO_AEAD, new CipherPadding[]
+	{
+			CipherPadding.NONE
+	}, "BC", true, false, 256, 512, 1024),
 
 	DES("DES", "DES", 64, 8, 64, 96, 128, CipherMode.SUNJCE_DEFAULT_NO_AEAD, CipherPadding.SUNJCE_DEFAULT, "SunJCE", true, false, 64),
-	DES_EDE("DESede", "Triple-DES (a.k.a. DESede)", 64, 96, 128, CipherMode.SUNJCE_DEFAULT_NO_AEAD, CipherPadding.SUNJCE_DEFAULT, "SunJCE", true, false, 192),
+	DES_EDE("DESede", "DESede: Triple-DES", 64, 96, 128, CipherMode.SUNJCE_DEFAULT_NO_AEAD, CipherPadding.SUNJCE_DEFAULT, "SunJCE", true, false, 192),
 
-	RC2("RC2", "Rivest cipher 2 (a.k.a. RC2)", 64, 40, 1024, 96, 128, CipherMode.SUNJCE_DEFAULT_NO_AEAD, CipherPadding.SUNJCE_DEFAULT, "SunJCE", true, false),
-	ARC4("ARCFOUR", "Alleged RC4 (a.k.a. ARC4, ARCFOUR)", -1, 40, 1024, 96, 128, "SunJCE", true, false),
-	RC5_32("RC5", "Rivest cipher 5 (a.k.a. RC5) - 32-bit mode", 128, 8, 2040, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false),
-	RC5_64("RC5-64", "Rivest cipher 5 (a.k.a. RC5) - 64-bit mode", 256, 8, 2040, 96, 128, CipherMode.BC_DEFAULT_NO_AEAD, CipherPadding.BC_DEFAULT, "BC", true, false),
-	RC6("RC6", "Rivest cipher 6 (a.k.a. RC6)", 128, 8, -1, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false),
+	RC2("RC2", "RC2: Rivest cipher 2", 64, 40, 1024, 96, 128, CipherMode.SUNJCE_DEFAULT_NO_AEAD, CipherPadding.SUNJCE_DEFAULT, "SunJCE", true, false),
+	ARC4("ARCFOUR", "ARC4: Alleged RC4", -1, 40, 1024, 96, 128, "SunJCE", true, false),
+	RC5_32("RC5", "RC5: Rivest cipher 5 (32-bit mode)", 128, 8, 2040, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false),
+	RC5_64("RC5-64", "RC5: Rivest cipher 5 (64-bit mode)", 256, 8, 2040, 96, 128, CipherMode.BC_DEFAULT_NO_AEAD, CipherPadding.BC_DEFAULT, "BC", true, false),
+	RC6("RC6", "RC6: Rivest cipher 6", 128, 8, -1, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false),
 
 	ARIA("ARIA", "ARIA", 128, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false, 128/* , 192, 256 */),
 
 	Camellia("Camellia", "Camellia", 128, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false, 128/* , 192, 256 */),
 
-	CAST5("CAST5", "CAST-128 (a.k.a. CAST5)", 128, 8, 128, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false),
-	CAST6("CAST6", "CAST-256 (a.k.a. CAST6)", 256, 8, 256, 96, 128, CipherMode.BC_DEFAULT_NO_AEAD, CipherPadding.BC_DEFAULT, "BC", true, false),
+	CAST5("CAST5", "CAST5 (CAST-128)", 128, 8, 128, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false),
+	CAST6("CAST6", "CAST6 (CAST-256)", 256, 8, 256, 96, 128, CipherMode.BC_DEFAULT_NO_AEAD, CipherPadding.BC_DEFAULT, "BC", true, false),
 
 	ChaCha("CHACHA", "ChaCha", 64, 96, 128, "BC", true, true, 128, 256),
 	ChaCha7539("CHACHA7539", "ChaCha-7539", 96, 96, 128, "BC", true, true, 256),
-	ChaChaP1305("CHACHA20-POLY1305", "ChaCha-Poly1305", -1, -1, -1, 96, 128, CipherMode.BC_DEFAULT_NO_AEAD, CipherPadding.BC_DEFAULT, "BC", true, false, 256),
+	ChaChaP1305("CHACHA20-POLY1305", "ChaCha-Poly1305", -1, -1, -1, 96, 128, CipherMode.NO_MODE_SUPPORT, CipherPadding.BC_DEFAULT, "BC", true, false, 256),
 
-	DSTU7624("DSTU7624", "DSTU7624 (a.k.a. Kalyna)", -1, -1, -1, 96, 128, CipherMode.BC_DEFAULT_NO_AEAD, CipherPadding.BC_DEFAULT, "BC", true, false, 128, 256, 512),
-	GOST3412_2015("GOST3412-2015", "GOST R 34.12-2015 (a.k.a Kuznyechik)", 128, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false, 256),
-	GOST28147("GOST28147", "GOST 28147 (a.k.a. Magma)", 64, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false, 256),
+	DSTU7624("DSTU7624", "DSTU7624 (Kalyna)", -1, -1, -1, 96, 128, CipherMode.BC_DEFAULT_NO_AEAD, CipherPadding.BC_DEFAULT, "BC", true, false, 128, 256, 512),
+	GOST3412_2015("GOST3412-2015", "GOST R 34.12-2015 (Kuznyechik)", 128, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false, 256),
+	GOST28147("GOST28147", "GOST 28147 (Magma)", 64, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false, 256),
 
 	Grain128("Grain128", "Grain-128", 96, 128, -1, 96, 128, "BC", true, true),
 	Grainv1("Grainv1", "Grain-v1", 64, 80, -1, 96, 128, "BC", true, true),
@@ -38,7 +41,7 @@ public enum CipherAlgorithm
 	HC128("HC128", "HC-128", 128, 96, 128, "BC", true, true, 128),
 	HC256("HC256", "HC-256", 256, 96, 128, "BC", true, true, 256),
 
-	IDEA("IDEA", "International Data Encryption Algorithm (a.k.a. IDEA)", 64, 8, -1, 96, 128, CipherMode.BC_DEFAULT_NO_AEAD, CipherPadding.BC_DEFAULT, "BC", true, false),
+	IDEA("IDEA", "IDEA: International Data Encryption Algorithm", 64, 8, -1, 96, 128, CipherMode.BC_DEFAULT_NO_AEAD, CipherPadding.BC_DEFAULT, "BC", true, false),
 
 	Noekeon("NOEKEON", "NOEKEON", -1, 128, -1, 96, 128, new CipherMode[]
 	{
@@ -48,12 +51,12 @@ public enum CipherAlgorithm
 	Rijndael("RIJNDAEL", "Rijndael", 128, 32, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false, 128, 160, 192, 224, 256),
 
 	Salsa20("SALSA20", "Salsa20", 64, 96, 128, "BC", true, true, 128, 256),
-	XSalsa20("XSALSA20", "Salsa20 with 192-bit IV (a.k.a. XSalsa20)", 64, 96, 128, "BC", true, true, 256),
+	XSalsa20("XSALSA20", "XSalsa20: Salsa20 with 192-bit IV", 64, 96, 128, "BC", true, true, 256),
 
 	SEED("SEED", "SEED", 128, 128, 1024, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false),
 
 	Serpent("Serpent", "Serpent", 128, 64, 1024, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false),
-	Tnepres("Tnepres", "Tnepres (Serpent algorithm with several mistakes. Only exists for backward-compatibility.)", 128, 64, -1, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false),
+	Tnepres("Tnepres", "Tnepres (Serpent algorithm with misimplant; Only exists for backward-compatibility.)", 128, 64, -1, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false),
 
 	SHACAL_2("SHACAL-2", "SHACAL-2", -1, -1, -1, 96, 128, CipherMode.BC_DEFAULT_NO_AEAD, CipherPadding.BC_DEFAULT, "BC", true, false, 128, 192, 256, 320, 384, 448, 512),
 
@@ -61,16 +64,16 @@ public enum CipherAlgorithm
 
 	SM4("SM4", "SM4 (formerly SMS4)", 128, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false, 128),
 
-	TEA("TEA", "Tiny Encryption Algorithm (a.k.a. TEA)", 128, -1, -1, 96, 128, CipherMode.BC_DEFAULT_NO_AEAD, CipherPadding.BC_DEFAULT, "BC", true, false, 128),
-	XTEA("XTEA", "eXtended Tiny Encryption Algorithm (a.k.a. XTEA)", 128, -1, -1, 96, 128, CipherMode.BC_DEFAULT_NO_AEAD, CipherPadding.BC_DEFAULT, "BC", true, false, 128),
+	TEA("TEA", "TEA: Tiny Encryption Algorithm", 128, -1, -1, 96, 128, CipherMode.BC_DEFAULT_NO_AEAD, CipherPadding.BC_DEFAULT, "BC", true, false, 128),
+	XTEA("XTEA", "XTEA: eXtended Tiny Encryption Algorithm", 128, -1, -1, 96, 128, CipherMode.BC_DEFAULT_NO_AEAD, CipherPadding.BC_DEFAULT, "BC", true, false, 128),
 
-	VMPC("VMPC", "Variably Modified Permutation Composition (a.k.a. VMPC)", 128, 8, -1, 96, 128, "BC", true, true),
-	VMPCKSA3("VMPC-KSA3", "Variably Modified Permutation Composition (a.k.a. VMPC) with Key Scheduling Algorithm 3 (a.k.a. KSA3)", 128, 8, -1, 96, 128, "BC", true, true),
+	VMPC("VMPC", "VMPC: Variably Modified Permutation Composition", 128, 8, -1, 96, 128, "BC", true, true),
+	VMPCKSA3("VMPC-KSA3", "VMPC-KSA3: Variably Modified Permutation Composition with Key Scheduling Algorithm 3", 128, 8, -1, 96, 128, "BC", true, true),
 
 	Zuc128("Zuc-128", "Zuc-128", 128, 96, 128, "BC", true, true, 128),
 	Zuc256("Zuc-256", "Zuc-256", 200, 96, 128, "BC", true, true, 256),
 
-	LEA("LEA", "Lightweight Encryption Algorithm (a.k.a. LEA)", 128, 8, 16, new CipherMode[]
+	LEA("LEA", "LEA: Lightweight Encryption Algorithm", 128, 8, 16, new CipherMode[]
 	{
 			CipherMode.ECB, CipherMode.CBC, CipherMode.CFB, CipherMode.OFB, CipherMode.CTS, CipherMode.CCM, CipherMode.GCM
 	}, new CipherPadding[]

@@ -7,7 +7,7 @@ import fancytext.encrypt.symmetric.cipher.AbstractCipher;
 
 public class CipherException extends GeneralSecurityException
 {
-	public CipherExceptionType type;
+	public final CipherExceptionType type;
 	private final AbstractCipher cipher;
 
 	public CipherException(final CipherExceptionType type)
@@ -44,15 +44,13 @@ public class CipherException extends GeneralSecurityException
 		final StringBuilder builder = new StringBuilder(64);
 		builder.append(super.toString()).append(Main.lineSeparator);
 
-		builder.append("* Error code: ").append(type.ordinal()).append("(").append(type.name()).append(") ").append(type.description).append(Main.lineSeparator);
+		builder.append("* Error code ").append(type.ordinal()).append(" (").append(type.name()).append("): ").append(type.description).append(Main.lineSeparator);
 
 		if (getCause() != null)
 			builder.append("* Cause: ").append(getCause()).append(Main.lineSeparator);
 
 		if (cipher != null)
 			builder.append(cipher.dumpInformations());
-
-		builder.append(Main.lineSeparator);
 
 		return builder.toString();
 	}

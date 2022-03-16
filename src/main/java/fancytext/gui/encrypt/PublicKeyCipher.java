@@ -2287,7 +2287,7 @@ public final class PublicKeyCipher extends JPanel
 					SpiBasedDigest hash = null;
 					try
 					{
-						hash = (SpiBasedDigest) Hasher.createHash(oaepPaddingDigest, stateSize, digestSize);
+						hash = (SpiBasedDigest) Hasher.createHasher(oaepPaddingDigest, stateSize, digestSize);
 					}
 					catch (final Throwable ignored)
 					{
@@ -2430,7 +2430,7 @@ public final class PublicKeyCipher extends JPanel
 				SpiBasedDigest hash = null;
 				try
 				{
-					hash = (SpiBasedDigest) Hasher.createHash(oaepPaddingDigest, stateSize, digestSize);
+					hash = (SpiBasedDigest) Hasher.createHasher(oaepPaddingDigest, stateSize, digestSize);
 				}
 				catch (final Throwable ignored)
 				{

@@ -4,11 +4,12 @@ import java.awt.*;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 
 import fancytext.Main;
+import fancytext.exceptions.InputReadException;
+import fancytext.exceptions.OutputWriteException;
 import fancytext.gui.EncodedIOPanel;
+import fancytext.utils.SimpleDocumentListener;
 import fancytext.utils.StackTraceToString;
 import fancytext.utils.encoding.Encoding;
 import fancytext.utils.MultiThreading;
@@ -101,29 +102,11 @@ public final class Encoder extends JPanel
 		gbc_encodedPanel.gridy = 3;
 		add(encodedPanel, gbc_encodedPanel);
 
-		plainPanel.textArea.getDocument().addDocumentListener(new DocumentListener()
+		plainPanel.textArea.getDocument().addDocumentListener(new SimpleDocumentListener(() ->
 		{
-			@Override
-			public void insertUpdate(final DocumentEvent e)
-			{
-				if (isRealtimeEncode())
-					doEncode();
-			}
-
-			@Override
-			public void removeUpdate(final DocumentEvent e)
-			{
-				if (isRealtimeEncode())
-					doEncode();
-			}
-
-			@Override
-			public void changedUpdate(final DocumentEvent e)
-			{
-				if (isRealtimeEncode())
-					doEncode();
-			}
-		});
+			if (isRealtimeEncodeEnabled())
+				doEncode();
+		}));
 
 		encodeButton.addActionListener(a -> doEncode());
 
@@ -136,7 +119,7 @@ public final class Encoder extends JPanel
 		plainPanel.textButton.addActionListener(a ->
 		{
 			realtimeEncodeCB.setEnabled(isRealtimeEncodeAvailable());
-			if (isRealtimeEncode())
+			if (isRealtimeEncodeEnabled())
 				doEncode();
 		});
 
@@ -145,7 +128,7 @@ public final class Encoder extends JPanel
 		encodedPanel.textButton.addActionListener(a ->
 		{
 			realtimeEncodeCB.setEnabled(isRealtimeEncodeAvailable());
-			if (isRealtimeEncode())
+			if (isRealtimeEncodeEnabled())
 				doEncode();
 		});
 
@@ -157,9 +140,17 @@ public final class Encoder extends JPanel
 		return plainPanel.textButton.isSelected() && encodedPanel.textButton.isSelected();
 	}
 
-	boolean isRealtimeEncode()
+	boolean isRealtimeEncodeEnabled()
 	{
 		return isRealtimeEncodeAvailable() && realtimeEncodeCB.isSelected();
+	}
+
+	private void printError(final String message, final Throwable t)
+	{
+		if (isRealtimeEncodeEnabled())
+			encodedPanel.textArea.setText(message + ": " + StackTraceToString.convert(t));
+		else
+			Main.exceptionMessageBox(t.getClass().getCanonicalName(), message, t);
 	}
 
 	void doEncode()
@@ -169,26 +160,34 @@ public final class Encoder extends JPanel
 
 		MultiThreading.getDefaultWorkers().submit(() ->
 		{
-			printOutput(updateIntermediate(readInput()));
-
-			encodeButton.setEnabled(true);
-			Main.setBusyCursor(this, false);
+			try
+			{
+				printOutput(updateIntermediate(readInput()));
+			}
+			catch (final Throwable t)
+			{
+				printError("Exception while progress", t);
+			}
+			finally
+			{
+				EventQueue.invokeLater(() ->
+				{
+					encodeButton.setEnabled(true);
+					Main.setBusyCursor(this, false);
+				});
+			}
 		});
 	}
 
-	private byte[] readInput()
+	private byte[] readInput() throws InputReadException
 	{
 		try
 		{
 			return plainPanel.read();
 		}
-		catch (final Throwable e)
+		catch (final Throwable t)
 		{
-			if (isRealtimeEncode())
-				encodedPanel.textArea.setText("Failed to read plain-text: " + StackTraceToString.convert(e));
-			else
-				Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while reading, parsing and decoding input", e);
-			return null;
+			throw new InputReadException(t);
 		}
 	}
 
@@ -209,7 +208,7 @@ public final class Encoder extends JPanel
 		return input;
 	}
 
-	private void printOutput(final byte[] bytes)
+	private void printOutput(final byte[] bytes) throws OutputWriteException
 	{
 		if (bytes == null)
 			return;
@@ -218,12 +217,9 @@ public final class Encoder extends JPanel
 		{
 			encodedPanel.write(bytes);
 		}
-		catch (final Throwable e)
+		catch (final Throwable t)
 		{
-			if (isRealtimeEncode())
-				encodedPanel.textArea.setText("Failed to write encoded text: " + StackTraceToString.convert(e));
-			else
-				Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while encoding and writing output", e);
+			throw new OutputWriteException(t);
 		}
 	}
 }

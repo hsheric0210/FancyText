@@ -5,13 +5,12 @@ import java.util.Optional;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 
 import fancytext.Main;
+import fancytext.exceptions.InputReadException;
+import fancytext.exceptions.OutputWriteException;
 import fancytext.hash.AbstractHash;
 import fancytext.hash.DigestException;
-import fancytext.hash.DigestExceptionType;
 import fancytext.hash.HashAlgorithm;
 import fancytext.hash.checksum.Adler32Checksum;
 import fancytext.hash.checksum.CRC16Checksum;
@@ -20,6 +19,7 @@ import fancytext.hash.digest.RIPEMDAndSHAKEDigest;
 import fancytext.hash.digest.SkeinDigest;
 import fancytext.hash.digest.SpiBasedDigest;
 import fancytext.utils.MultiThreading;
+import fancytext.utils.SimpleDocumentListener;
 import fancytext.utils.StackTraceToString;
 import fancytext.utils.encoding.Encoding;
 
@@ -58,7 +58,7 @@ public final class Hasher extends JPanel
 		};
 		gridBagLayout.rowWeights = new double[]
 		{
-				0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE
+				1.0, 0.0, 0.0, 1.0, Double.MIN_VALUE
 		};
 		setLayout(gridBagLayout);
 
@@ -349,8 +349,8 @@ public final class Hasher extends JPanel
 			{
 				try
 				{
-					if (doSave(doHash(getInputBytes())))
-						Main.notificationMessageBox("Successfully hashed!", "Successfully hashed the message!", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null);
+					doSave(doHash(getInputBytes()));
+					Main.notificationMessageBox("Successfully hashed!", "Successfully hashed the message!", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null);
 				}
 				catch (final Throwable ex)
 				{
@@ -368,29 +368,11 @@ public final class Hasher extends JPanel
 			});
 		});
 
-		inputPanel.textArea.getDocument().addDocumentListener(new DocumentListener()
+		inputPanel.textArea.getDocument().addDocumentListener(new SimpleDocumentListener(() ->
 		{
-			@Override
-			public void insertUpdate(final DocumentEvent e)
-			{
-				if (isRealtimeEncode())
-					realtimeUpdate();
-			}
-
-			@Override
-			public void removeUpdate(final DocumentEvent e)
-			{
-				if (isRealtimeEncode())
-					realtimeUpdate();
-			}
-
-			@Override
-			public void changedUpdate(final DocumentEvent e)
-			{
-				if (isRealtimeEncode())
-					realtimeUpdate();
-			}
-		});
+			if (isRealtimeHashEnabled())
+				realtimeUpdate();
+		}));
 
 		realtimeHashCB.addActionListener(a ->
 		{
@@ -400,48 +382,44 @@ public final class Hasher extends JPanel
 
 		inputPanel.textButton.addActionListener(a ->
 		{
-			realtimeHashCB.setEnabled(isRealtimeEncodeAvailable());
-			if (isRealtimeEncode())
+			realtimeHashCB.setEnabled(isRealtimeHashAvailable());
+			if (isRealtimeHashEnabled())
 				realtimeUpdate();
 		});
 
-		inputPanel.fileButton.addActionListener(a -> realtimeHashCB.setEnabled(isRealtimeEncodeAvailable()));
+		inputPanel.fileButton.addActionListener(a -> realtimeHashCB.setEnabled(isRealtimeHashAvailable()));
 
 		hashOutputPanel.textButton.addActionListener(a ->
 		{
-			realtimeHashCB.setEnabled(isRealtimeEncodeAvailable());
-			if (isRealtimeEncode())
+			realtimeHashCB.setEnabled(isRealtimeHashAvailable());
+			if (isRealtimeHashEnabled())
 				realtimeUpdate();
 		});
 
-		hashOutputPanel.fileButton.addActionListener(a -> realtimeHashCB.setEnabled(isRealtimeEncodeAvailable()));
+		hashOutputPanel.fileButton.addActionListener(a -> realtimeHashCB.setEnabled(isRealtimeHashAvailable()));
 
 		// </editor-fold>
 	}
 
-	boolean isRealtimeEncode()
+	boolean isRealtimeHashEnabled()
 	{
-		return realtimeHashCB.isSelected() && isRealtimeEncodeAvailable();
+		return realtimeHashCB.isSelected() && isRealtimeHashAvailable();
 	}
 
-	boolean isRealtimeEncodeAvailable()
+	boolean isRealtimeHashAvailable()
 	{
 		return inputPanel.textButton.isSelected() && hashOutputPanel.textButton.isSelected();
 	}
 
-	private byte[] getInputBytes()
+	private byte[] getInputBytes() throws InputReadException
 	{
 		try
 		{
 			return inputPanel.read();
 		}
-		catch (final Throwable e)
+		catch (final Throwable t)
 		{
-			if (isRealtimeEncode())
-				hashOutputPanel.textArea.setText("Failed to read plain-text: " + StackTraceToString.convert(e));
-			else
-				Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while reading, parsing and decoding input", e);
-			return null;
+			throw new InputReadException(t);
 		}
 	}
 
@@ -460,24 +438,19 @@ public final class Hasher extends JPanel
 		});
 	}
 
-	private boolean doSave(final byte[] bytes)
+	private void doSave(final byte[] bytes) throws OutputWriteException
 	{
 		try
 		{
 			hashOutputPanel.write(bytes);
-			return true;
 		}
-		catch (final Throwable e)
+		catch (final Throwable t)
 		{
-			if (isRealtimeEncode())
-				hashOutputPanel.textArea.setText("Failed to write hash: " + StackTraceToString.convert(e));
-			else
-				Main.exceptionMessageBox(e.getClass().getCanonicalName(), "Exception occurred while encoding and writing output", e);
-			return false;
+			throw new OutputWriteException(t);
 		}
 	}
 
-	public static AbstractHash createHash(final HashAlgorithm algorithm, final int stateSizeBits, final int digestSizeBits) throws DigestException
+	public static AbstractHash createHasher(final HashAlgorithm algorithm, final int stateSizeBits, final int digestSizeBits) throws DigestException
 	{
 		switch (algorithm)
 		{
@@ -503,9 +476,9 @@ public final class Hasher extends JPanel
 		final int stateSizeBits = (int) Optional.ofNullable(hashStateSizeBitsCB.getSelectedItem()).orElse(256);
 		final int digestSizeBits = (int) Optional.ofNullable(hashDigestSizeBitsCB.getSelectedItem()).orElse(256);
 
-		final AbstractHash hash = createHash(hashAlgorithm, stateSizeBits, digestSizeBits);
-		hash.init();
-		hash.update(messageBytes);
-		return hash.digest();
+		final AbstractHash hasher = createHasher(hashAlgorithm, stateSizeBits, digestSizeBits);
+		hasher.init();
+		hasher.update(messageBytes);
+		return hasher.digest();
 	}
 }

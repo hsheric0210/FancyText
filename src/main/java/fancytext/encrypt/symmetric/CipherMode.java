@@ -3,6 +3,7 @@ package fancytext.encrypt.symmetric;
 @SuppressWarnings("StaticMethodOnlyUsedInOneClass") // because of 'illegal forward reference' error
 public enum CipherMode
 {
+	EMPTY,
 	ECB(false, false, false, false),
 	CBC(true, false, false, false),
 	CFB(true, false, false, true),
@@ -38,6 +39,16 @@ public enum CipherMode
 			ECB, CBC, CFB, OFB, CTR, CTS/* , CCM, GCM */
 	};
 
+	public static final CipherMode[] NO_MODE_SUPPORT =
+	{
+			EMPTY
+	};
+
+	CipherMode()
+	{
+		this(false, false, false, false);
+	}
+
 	CipherMode(final boolean usingIV, final boolean usingNonce, final boolean AEAD, final boolean usingUnitBytes)
 	{
 		isUsingIV = usingIV;
@@ -64,5 +75,13 @@ public enum CipherMode
 	public boolean isUsingUnitBytes()
 	{
 		return isUsingUnitBytes;
+	}
+
+	@Override
+	public String toString()
+	{
+		if (this == EMPTY)
+			return "";
+		return name();
 	}
 }
