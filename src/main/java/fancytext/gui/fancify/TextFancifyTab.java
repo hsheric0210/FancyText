@@ -1,6 +1,7 @@
 package fancytext.gui.fancify;
 
 import java.awt.*;
+import java.awt.datatransfer.StringSelection;
 import java.util.*;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
@@ -9,6 +10,7 @@ import java.util.Map.Entry;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
 
 import fancytext.Main;
@@ -19,20 +21,29 @@ public final class TextFancifyTab extends JPanel
 	private static final long serialVersionUID = 56531445307439992L;
 	private final JTextField keyField;
 	private final JTextField valueField;
+	private final JCheckBox conversionEnabledCB;
 	@SuppressWarnings("WeakerAccess")
 	List<Entry<String, List<String>>> conversionMap;
+	List<String> insertionList;
 	@SuppressWarnings("WeakerAccess")
 	JList<String> convertFrom;
 
-	private JList<String> convertTo;
+	private final JList<String> convertTo;
 	private final JTextPane textInputField;
 	private final JTextPane textOutputField;
-	private final JCheckBox caseSensitiveCB;
-	private final JSpinner convertRateSpinner;
+	private final JCheckBox conversionCaseSensitiveCB;
+	private final JSpinner conversionRateSpinner;
+	private final JCheckBox insertionEnabledCB;
+	private final JList<String> insertionTable;
+	private final JSpinner insertionMinSpinner;
+	private final JSpinner insertionMaxSpinner;
 
 	public TextFancifyTab()
 	{
 		initDefaultConversionMap(ConversionTablePresets.LEET);
+		initDefaultInsertionMap(InsertionTablePresets.COMBINING_DIACRITICAL_MARKS);
+
+		setSize(1000, 1000); // TODO: remove it
 
 		// Main border setup
 		setBorder(new TitledBorder(null, "Fancify Text", TitledBorder.LEADING, TitledBorder.TOP, null, null));
@@ -41,19 +52,19 @@ public final class TextFancifyTab extends JPanel
 		final GridBagLayout theLayout = new GridBagLayout();
 		theLayout.columnWidths = new int[]
 		{
-				0, 0, 0, 0
+				0, 0, 0
 		};
 		theLayout.rowHeights = new int[]
 		{
-				0, 0, 0, 0, 0
+				0, 0, 0, 0, 0, 0
 		};
 		theLayout.columnWeights = new double[]
 		{
-				1.0, 0.0, 1.0, Double.MIN_VALUE
+				1.0, 1.0, Double.MIN_VALUE
 		};
 		theLayout.rowWeights = new double[]
 		{
-				0.0, 0.0, 0.0, 1.0, Double.MIN_VALUE
+				0.0, 0.0, 0.0, 0.0, 1.0, Double.MIN_VALUE
 		};
 		setLayout(theLayout);
 
@@ -63,7 +74,7 @@ public final class TextFancifyTab extends JPanel
 		final GridBagConstraints gbc_textInputFieldPanel = new GridBagConstraints();
 		gbc_textInputFieldPanel.anchor = GridBagConstraints.PAGE_START;
 		gbc_textInputFieldPanel.ipady = 40;
-		gbc_textInputFieldPanel.gridwidth = 3;
+		gbc_textInputFieldPanel.gridwidth = 2;
 		gbc_textInputFieldPanel.insets = new Insets(0, 0, 5, 0);
 		gbc_textInputFieldPanel.fill = GridBagConstraints.HORIZONTAL;
 		gbc_textInputFieldPanel.gridx = 0;
@@ -92,10 +103,6 @@ public final class TextFancifyTab extends JPanel
 		textInputField = new JTextPane();
 		final Font textInputFieldDefaultFont = textInputField.getFont();
 		textInputField.setFont(new Font("Consolas", textInputFieldDefaultFont.getStyle(), 16));
-		final GridBagConstraints gbc_textInputField = new GridBagConstraints();
-		gbc_textInputField.fill = GridBagConstraints.BOTH;
-		gbc_textInputField.gridx = 0;
-		gbc_textInputField.gridy = 1;
 
 		final JScrollPane textInputFieldScrollPane = new JScrollPane();
 		final GridBagConstraints gbc_textInputFieldScrollPane = new GridBagConstraints();
@@ -111,7 +118,7 @@ public final class TextFancifyTab extends JPanel
 		final GridBagConstraints gbc_textOutputFieldPanel = new GridBagConstraints();
 		gbc_textOutputFieldPanel.anchor = GridBagConstraints.PAGE_START;
 		gbc_textOutputFieldPanel.ipady = 40;
-		gbc_textOutputFieldPanel.gridwidth = 3;
+		gbc_textOutputFieldPanel.gridwidth = 2;
 		gbc_textOutputFieldPanel.insets = new Insets(0, 0, 5, 0);
 		gbc_textOutputFieldPanel.fill = GridBagConstraints.HORIZONTAL;
 		gbc_textOutputFieldPanel.gridx = 0;
@@ -140,10 +147,6 @@ public final class TextFancifyTab extends JPanel
 		textOutputField = new JTextPane();
 		final Font textOutputFieldDefaultFont = textInputField.getFont();
 		textOutputField.setFont(new Font("Consolas", textOutputFieldDefaultFont.getStyle(), 16));
-		final GridBagConstraints gbc_textOutputField = new GridBagConstraints();
-		gbc_textOutputField.fill = GridBagConstraints.BOTH;
-		gbc_textOutputField.gridx = 0;
-		gbc_textOutputField.gridy = 1;
 
 		final JScrollPane textOutputFieldScrollPane = new JScrollPane();
 		final GridBagConstraints gbc_textOutputFieldScrollPane = new GridBagConstraints();
@@ -153,106 +156,92 @@ public final class TextFancifyTab extends JPanel
 		textOutputFieldScrollPane.setViewportView(textOutputField);
 		textOutputFieldPanel.add(textOutputFieldScrollPane, gbc_textOutputFieldScrollPane);
 
-		// Case sensitive checkbox
-		caseSensitiveCB = new JCheckBox("Case-sensitive");
-		final GridBagConstraints gbc_caseSensitiveCB = new GridBagConstraints();
-		gbc_caseSensitiveCB.anchor = GridBagConstraints.FIRST_LINE_START;
-		gbc_caseSensitiveCB.insets = new Insets(0, 0, 5, 5);
-		gbc_caseSensitiveCB.gridx = 0;
-		gbc_caseSensitiveCB.gridy = 2;
-		add(caseSensitiveCB, gbc_caseSensitiveCB);
-
 		// Convert button
 		final JButton convertButton = new JButton("Convert");
 		final GridBagConstraints gbc_convertButton = new GridBagConstraints();
+		gbc_convertButton.gridwidth = 2;
 		gbc_convertButton.ipadx = 60;
-		gbc_convertButton.fill = GridBagConstraints.BOTH;
-		gbc_convertButton.insets = new Insets(0, 0, 5, 5);
-		gbc_convertButton.gridx = 1;
+		gbc_convertButton.insets = new Insets(0, 0, 5, 0);
+		gbc_convertButton.gridx = 0;
 		gbc_convertButton.gridy = 2;
 		add(convertButton, gbc_convertButton);
 
-		// Convert Button
-		convertButton.addActionListener(e ->
-		{
-			convertButton.setEnabled(false);
-
-			MultiThreading.getDefaultWorkers().submit(() ->
-			{
-				try
-				{
-					if (doConvert())
-						Main.notificationMessageBox("Successfully converted!", "Successfully converted the message!", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null);
-				}
-				finally
-				{
-					convertButton.setEnabled(true);
-				}
-			});
-		});
-
-		final JPanel convertRatePanel = new JPanel();
-		convertRatePanel.setBorder(new CompoundBorder(new TitledBorder(null, "Convert rate (%)", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)), new EmptyBorder(0, 0, 2, 2)));
-		final GridBagConstraints gbc_convertRatePanel = new GridBagConstraints();
-		gbc_convertRatePanel.anchor = GridBagConstraints.FIRST_LINE_END;
-		gbc_convertRatePanel.ipadx = 80;
-		gbc_convertRatePanel.insets = new Insets(0, 0, 5, 0);
-		gbc_convertRatePanel.gridx = 2;
-		gbc_convertRatePanel.gridy = 2;
-		add(convertRatePanel, gbc_convertRatePanel);
-		convertRatePanel.setLayout(new BorderLayout(0, 0));
-
-		convertRateSpinner = new JSpinner();
-		convertRateSpinner.setModel(new SpinnerNumberModel(100, 0, 100, 1));
-		convertRatePanel.add(convertRateSpinner, BorderLayout.CENTER);
+		final JCheckBox realtimeUpdateCB = new JCheckBox("Real-time update");
+		final GridBagConstraints gbc_realtimeUpdateCB = new GridBagConstraints();
+		gbc_realtimeUpdateCB.gridwidth = 2;
+		gbc_realtimeUpdateCB.insets = new Insets(0, 0, 5, 0);
+		gbc_realtimeUpdateCB.gridx = 0;
+		gbc_realtimeUpdateCB.gridy = 3;
+		add(realtimeUpdateCB, gbc_realtimeUpdateCB);
 
 		// Conversion Table Panel
-		final JPanel conversionTablePanel = new JPanel();
-		conversionTablePanel.setBorder(new TitledBorder(null, "Conversion table", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-		final GridBagConstraints gbc_conversionTablePanel = new GridBagConstraints();
-		gbc_conversionTablePanel.gridwidth = 3;
-		gbc_conversionTablePanel.fill = GridBagConstraints.BOTH;
-		gbc_conversionTablePanel.gridx = 0;
-		gbc_conversionTablePanel.gridy = 3;
-		add(conversionTablePanel, gbc_conversionTablePanel);
-		final GridBagLayout gbl_conversionTablePanel = new GridBagLayout();
-		gbl_conversionTablePanel.columnWidths = new int[]
-		{
-				0, 0
-		};
-		gbl_conversionTablePanel.rowHeights = new int[]
+		final JPanel conversionPanel = new JPanel();
+		conversionPanel.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Conversion", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
+		final GridBagConstraints gbc_conversionPanel = new GridBagConstraints();
+		gbc_conversionPanel.insets = new Insets(0, 0, 0, 5);
+		gbc_conversionPanel.fill = GridBagConstraints.BOTH;
+		gbc_conversionPanel.gridx = 0;
+		gbc_conversionPanel.gridy = 4;
+		add(conversionPanel, gbc_conversionPanel);
+		final GridBagLayout gbl_conversionPanel = new GridBagLayout();
+		gbl_conversionPanel.columnWidths = new int[]
 		{
 				0, 0, 0
 		};
-		gbl_conversionTablePanel.columnWeights = new double[]
+		gbl_conversionPanel.rowHeights = new int[]
+		{
+				0, 0, 0
+		};
+		gbl_conversionPanel.columnWeights = new double[]
+		{
+				0.0, 1.0, Double.MIN_VALUE
+		};
+		gbl_conversionPanel.rowWeights = new double[]
+		{
+				0.0, 1.0, Double.MIN_VALUE
+		};
+		conversionPanel.setLayout(gbl_conversionPanel);
+
+		final JPanel conversionTabelPanel = new JPanel();
+		conversionTabelPanel.setBorder(new TitledBorder(null, "Conversion Table", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		final GridBagConstraints gbc_conversionTabelPanel = new GridBagConstraints();
+		gbc_conversionTabelPanel.gridheight = 2;
+		gbc_conversionTabelPanel.fill = GridBagConstraints.BOTH;
+		gbc_conversionTabelPanel.gridx = 1;
+		gbc_conversionTabelPanel.gridy = 0;
+		conversionPanel.add(conversionTabelPanel, gbc_conversionTabelPanel);
+		final GridBagLayout gbl_conversionTabelPanel = new GridBagLayout();
+		gbl_conversionTabelPanel.columnWidths = new int[]
+		{
+				0, 0
+		};
+		gbl_conversionTabelPanel.rowHeights = new int[]
+		{
+				0, 0, 0
+		};
+		gbl_conversionTabelPanel.columnWeights = new double[]
 		{
 				1.0, Double.MIN_VALUE
 		};
-		gbl_conversionTablePanel.rowWeights = new double[]
+		gbl_conversionTabelPanel.rowWeights = new double[]
 		{
 				1.0, 1.0, Double.MIN_VALUE
 		};
-		conversionTablePanel.setLayout(gbl_conversionTablePanel);
+		conversionTabelPanel.setLayout(gbl_conversionTabelPanel);
 
 		// Conversion Table - Convert from list
 		convertFrom = new JList<>();
 		convertFrom.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		final GridBagConstraints gbc_convertFrom = new GridBagConstraints();
-		gbc_convertFrom.ipady = 30;
-		gbc_convertFrom.gridwidth = 3;
-		gbc_convertFrom.insets = new Insets(0, 0, 5, 0);
-		gbc_convertFrom.fill = GridBagConstraints.BOTH;
-		gbc_convertFrom.gridx = 0;
-		gbc_convertFrom.gridy = 1;
 
 		// Conversion Table - Convert from panel
 		final JPanel convertFromPanel = new JPanel();
-		convertFromPanel.setBorder(new TitledBorder(null, "Convert from", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		final GridBagConstraints gbc_convertFromPanel = new GridBagConstraints();
-		gbc_convertFromPanel.insets = new Insets(0, 0, 5, 0);
 		gbc_convertFromPanel.fill = GridBagConstraints.BOTH;
+		gbc_convertFromPanel.insets = new Insets(0, 0, 5, 0);
 		gbc_convertFromPanel.gridx = 0;
 		gbc_convertFromPanel.gridy = 0;
+		conversionTabelPanel.add(convertFromPanel, gbc_convertFromPanel);
+		convertFromPanel.setBorder(new TitledBorder(null, "Convert from", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		final GridBagLayout gbl_convertFromPanel = new GridBagLayout();
 		gbl_convertFromPanel.columnWidths = new int[]
 		{
@@ -271,7 +260,6 @@ public final class TextFancifyTab extends JPanel
 				1.0, 0.0
 		};
 		convertFromPanel.setLayout(gbl_convertFromPanel);
-		conversionTablePanel.add(convertFromPanel, gbc_convertFromPanel);
 
 		// Conversion Table - Convert from panel - Convert from list scroll pane
 		final JScrollPane convertFromScrollPane = new JScrollPane();
@@ -307,6 +295,331 @@ public final class TextFancifyTab extends JPanel
 		gbc_applyConversionKeyButton.gridy = 1;
 		convertFromPanel.add(applyConversionKeyButton, gbc_applyConversionKeyButton);
 
+		// Conversion Table - Convert to panel
+		final JPanel convertToPanel = new JPanel();
+		convertToPanel.setBorder(new TitledBorder(null, "Will be converted to", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
+		final GridBagConstraints gbc_convertToPanel = new GridBagConstraints();
+		gbc_convertToPanel.fill = GridBagConstraints.BOTH;
+		gbc_convertToPanel.gridx = 0;
+		gbc_convertToPanel.gridy = 1;
+		conversionTabelPanel.add(convertToPanel, gbc_convertToPanel);
+		final GridBagLayout gbl_convertToPanel = new GridBagLayout();
+		gbl_convertToPanel.columnWidths = new int[]
+		{
+				0, 0, 0, 0
+		};
+		gbl_convertToPanel.rowHeights = new int[]
+		{
+				0, 0, 0
+		};
+		gbl_convertToPanel.columnWeights = new double[]
+		{
+				1.0, 0.0, 0.0, Double.MIN_VALUE
+		};
+		gbl_convertToPanel.rowWeights = new double[]
+		{
+				1.0, 0.0, Double.MIN_VALUE
+		};
+		convertToPanel.setLayout(gbl_convertToPanel);
+
+		// Conversion Table - Convert to panel - Convert to list scroll pane - Convert to list
+		convertTo = new JList<>();
+
+		// Conversion Table - Convert to panel - Convert to list scroll pane
+		final JScrollPane convertToScroll = new JScrollPane();
+		final GridBagConstraints gbc_convertToScroll = new GridBagConstraints();
+		gbc_convertToScroll.ipady = 120;
+		gbc_convertToScroll.gridwidth = 3;
+		gbc_convertToScroll.insets = new Insets(0, 0, 5, 0);
+		gbc_convertToScroll.fill = GridBagConstraints.BOTH;
+		gbc_convertToScroll.gridx = 0;
+		gbc_convertToScroll.gridy = 0;
+		convertToScroll.setViewportView(convertTo);
+		convertToPanel.add(convertToScroll, gbc_convertToScroll);
+
+		// Conversion Table - Convert to panel - Selected list component manipulation field
+		valueField = new JTextField();
+		final GridBagConstraints gbc_valueField = new GridBagConstraints();
+		gbc_valueField.insets = new Insets(0, 0, 0, 5);
+		gbc_valueField.fill = GridBagConstraints.HORIZONTAL;
+		gbc_valueField.gridx = 0;
+		gbc_valueField.gridy = 1;
+		convertToPanel.add(valueField, gbc_valueField);
+		valueField.setColumns(10);
+
+		// Conversion Table - Convert to panel - Add button
+		final JButton addConversionValueButton = new JButton("Add");
+		final GridBagConstraints gbc_addConversionValueButton = new GridBagConstraints();
+		gbc_addConversionValueButton.insets = new Insets(0, 0, 0, 5);
+		gbc_addConversionValueButton.gridx = 1;
+		gbc_addConversionValueButton.gridy = 1;
+		convertToPanel.add(addConversionValueButton, gbc_addConversionValueButton);
+
+		// Conversion Table - Convert to panel - Apply change button
+		final JButton applyConversionValueButton = new JButton("Apply change");
+		final GridBagConstraints gbc_applyConversionValueButton = new GridBagConstraints();
+		gbc_applyConversionValueButton.gridx = 2;
+		gbc_applyConversionValueButton.gridy = 1;
+		convertToPanel.add(applyConversionValueButton, gbc_applyConversionValueButton);
+
+		conversionEnabledCB = new JCheckBox("Enable");
+		final GridBagConstraints gbc_conversionEnabledCB = new GridBagConstraints();
+		gbc_conversionEnabledCB.anchor = GridBagConstraints.FIRST_LINE_START;
+		gbc_conversionEnabledCB.insets = new Insets(0, 0, 5, 5);
+		gbc_conversionEnabledCB.gridx = 0;
+		gbc_conversionEnabledCB.gridy = 0;
+		conversionPanel.add(conversionEnabledCB, gbc_conversionEnabledCB);
+		conversionEnabledCB.setSelected(true);
+
+		final JPanel conversionOptionsPanel = new JPanel();
+		final GridBagConstraints gbc_conversionOptionsPanel = new GridBagConstraints();
+		gbc_conversionOptionsPanel.anchor = GridBagConstraints.PAGE_START;
+		gbc_conversionOptionsPanel.insets = new Insets(0, 0, 0, 5);
+		gbc_conversionOptionsPanel.gridx = 0;
+		gbc_conversionOptionsPanel.gridy = 1;
+		conversionPanel.add(conversionOptionsPanel, gbc_conversionOptionsPanel);
+		conversionOptionsPanel.setBorder(new TitledBorder(null, "Options", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		final GridBagLayout gbl_conversionOptionsPanel = new GridBagLayout();
+		gbl_conversionOptionsPanel.columnWidths = new int[]
+		{
+				146, 0
+		};
+		gbl_conversionOptionsPanel.rowHeights = new int[]
+		{
+				0, 52, 0, 0
+		};
+		gbl_conversionOptionsPanel.columnWeights = new double[]
+		{
+				0.0, Double.MIN_VALUE
+		};
+		gbl_conversionOptionsPanel.rowWeights = new double[]
+		{
+				0.0, 0.0, 0.0, Double.MIN_VALUE
+		};
+		conversionOptionsPanel.setLayout(gbl_conversionOptionsPanel);
+
+		// Case sensitive checkbox
+		conversionCaseSensitiveCB = new JCheckBox("Case-sensitive");
+		final GridBagConstraints gbc_caseSensitiveCB = new GridBagConstraints();
+		gbc_caseSensitiveCB.insets = new Insets(0, 0, 5, 0);
+		gbc_caseSensitiveCB.anchor = GridBagConstraints.FIRST_LINE_START;
+		gbc_caseSensitiveCB.gridx = 0;
+		gbc_caseSensitiveCB.gridy = 0;
+		conversionOptionsPanel.add(conversionCaseSensitiveCB, gbc_caseSensitiveCB);
+
+		final JPanel conversionRatePanel = new JPanel();
+		final GridBagConstraints gbc_convertRatePanel = new GridBagConstraints();
+		gbc_convertRatePanel.insets = new Insets(0, 0, 5, 0);
+		gbc_convertRatePanel.anchor = GridBagConstraints.PAGE_START;
+		gbc_convertRatePanel.fill = GridBagConstraints.HORIZONTAL;
+		gbc_convertRatePanel.gridx = 0;
+		gbc_convertRatePanel.gridy = 1;
+		gbc_convertRatePanel.ipadx = 100;
+		conversionOptionsPanel.add(conversionRatePanel, gbc_convertRatePanel);
+		conversionRatePanel.setBorder(new CompoundBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Convert rate (in percent)", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)), new EmptyBorder(0, 0, 2, 2)));
+		conversionRatePanel.setLayout(new BorderLayout(0, 0));
+
+		conversionRateSpinner = new JSpinner();
+		conversionRateSpinner.setModel(new SpinnerNumberModel(100, 0, 100, 1));
+		conversionRatePanel.add(conversionRateSpinner, BorderLayout.CENTER);
+
+		// Conversion Table - Conversion table presets panel
+		final JPanel conversionTablePresetsPanel = new JPanel();
+		final GridBagConstraints gbc_conversionTablePresetsPanel = new GridBagConstraints();
+		gbc_conversionTablePresetsPanel.anchor = GridBagConstraints.PAGE_START;
+		gbc_conversionTablePresetsPanel.fill = GridBagConstraints.HORIZONTAL;
+		gbc_conversionTablePresetsPanel.gridx = 0;
+		gbc_conversionTablePresetsPanel.gridy = 2;
+		conversionOptionsPanel.add(conversionTablePresetsPanel, gbc_conversionTablePresetsPanel);
+		conversionTablePresetsPanel.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Table Presets", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
+		conversionTablePresetsPanel.setLayout(new BorderLayout(0, 0));
+
+		// Conversion Table - Conversion table presets panel - Conversion table presets combo box
+		final JComboBox<ConversionTablePresets> conversionTablePresets = new JComboBox<>();
+		conversionTablePresetsPanel.add(conversionTablePresets, BorderLayout.CENTER);
+
+		final JPanel insertionPanel = new JPanel();
+		insertionPanel.setBorder(new TitledBorder(null, "Insertion", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		final GridBagConstraints gbc_insertionPanel = new GridBagConstraints();
+		gbc_insertionPanel.fill = GridBagConstraints.BOTH;
+		gbc_insertionPanel.gridx = 1;
+		gbc_insertionPanel.gridy = 4;
+		add(insertionPanel, gbc_insertionPanel);
+		final GridBagLayout gbl_insertionPanel = new GridBagLayout();
+		gbl_insertionPanel.columnWidths = new int[]
+		{
+				0, 0, 0
+		};
+		gbl_insertionPanel.rowHeights = new int[]
+		{
+				0, 0, 0
+		};
+		gbl_insertionPanel.columnWeights = new double[]
+		{
+				1.0, 1.0, Double.MIN_VALUE
+		};
+		gbl_insertionPanel.rowWeights = new double[]
+		{
+				0.0, 1.0, Double.MIN_VALUE
+		};
+		insertionPanel.setLayout(gbl_insertionPanel);
+
+		final JPanel insertionTablePanel = new JPanel();
+		insertionTablePanel.setBorder(new TitledBorder(null, "Insertion Table", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		final GridBagConstraints gbc_insertionTablePanel = new GridBagConstraints();
+		gbc_insertionTablePanel.gridheight = 2;
+		gbc_insertionTablePanel.insets = new Insets(0, 0, 0, 5);
+		gbc_insertionTablePanel.fill = GridBagConstraints.BOTH;
+		gbc_insertionTablePanel.gridx = 0;
+		gbc_insertionTablePanel.gridy = 0;
+		insertionPanel.add(insertionTablePanel, gbc_insertionTablePanel);
+		final GridBagLayout gbl_insertionTablePanel = new GridBagLayout();
+		gbl_insertionTablePanel.columnWidths = new int[]
+		{
+				0, 0, 0, 0
+		};
+		gbl_insertionTablePanel.rowHeights = new int[]
+		{
+				0, 0, 0
+		};
+		gbl_insertionTablePanel.columnWeights = new double[]
+		{
+				1.0, 0.0, 0.0, Double.MIN_VALUE
+		};
+		gbl_insertionTablePanel.rowWeights = new double[]
+		{
+				1.0, 0.0, Double.MIN_VALUE
+		};
+		insertionTablePanel.setLayout(gbl_insertionTablePanel);
+
+		final JScrollPane insertionTableScrollPane = new JScrollPane();
+		final GridBagConstraints gbc_insertionTableScrollPane = new GridBagConstraints();
+		gbc_insertionTableScrollPane.gridwidth = 3;
+		gbc_insertionTableScrollPane.insets = new Insets(0, 0, 5, 5);
+		gbc_insertionTableScrollPane.fill = GridBagConstraints.BOTH;
+		gbc_insertionTableScrollPane.gridx = 0;
+		gbc_insertionTableScrollPane.gridy = 0;
+		insertionTablePanel.add(insertionTableScrollPane, gbc_insertionTableScrollPane);
+
+		insertionTable = new JList<>();
+		insertionTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		insertionTableScrollPane.setViewportView(insertionTable);
+
+		final JTextField insertionValueField = new JTextField();
+		insertionValueField.setText("");
+		insertionValueField.setColumns(10);
+		final GridBagConstraints gbc_insertionValueField = new GridBagConstraints();
+		gbc_insertionValueField.insets = new Insets(0, 0, 0, 5);
+		gbc_insertionValueField.fill = GridBagConstraints.HORIZONTAL;
+		gbc_insertionValueField.gridx = 0;
+		gbc_insertionValueField.gridy = 1;
+		insertionTablePanel.add(insertionValueField, gbc_insertionValueField);
+
+		final JButton addInsertionValueButton = new JButton("Add");
+		final GridBagConstraints gbc_addInsertionValueButton = new GridBagConstraints();
+		gbc_addInsertionValueButton.insets = new Insets(0, 0, 0, 5);
+		gbc_addInsertionValueButton.gridx = 1;
+		gbc_addInsertionValueButton.gridy = 1;
+		insertionTablePanel.add(addInsertionValueButton, gbc_addInsertionValueButton);
+
+		final JButton applyInsertionValueButton = new JButton("Apply change");
+		final GridBagConstraints gbc_applyInsertionValueButton = new GridBagConstraints();
+		gbc_applyInsertionValueButton.gridx = 2;
+		gbc_applyInsertionValueButton.gridy = 1;
+		insertionTablePanel.add(applyInsertionValueButton, gbc_applyInsertionValueButton);
+
+		insertionEnabledCB = new JCheckBox("Enable");
+		final GridBagConstraints gbc_insertionEnabledCB = new GridBagConstraints();
+		gbc_insertionEnabledCB.insets = new Insets(0, 0, 5, 0);
+		gbc_insertionEnabledCB.anchor = GridBagConstraints.FIRST_LINE_START;
+		gbc_insertionEnabledCB.gridx = 1;
+		gbc_insertionEnabledCB.gridy = 0;
+		insertionPanel.add(insertionEnabledCB, gbc_insertionEnabledCB);
+
+		final JPanel insertionOptionsPanel = new JPanel();
+		insertionOptionsPanel.setBorder(new TitledBorder(null, "Options", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		final GridBagConstraints gbc_insertionOptionsPanel = new GridBagConstraints();
+		gbc_insertionOptionsPanel.fill = GridBagConstraints.BOTH;
+		gbc_insertionOptionsPanel.gridx = 1;
+		gbc_insertionOptionsPanel.gridy = 1;
+		insertionPanel.add(insertionOptionsPanel, gbc_insertionOptionsPanel);
+		final GridBagLayout gbl_insertionOptionsPanel = new GridBagLayout();
+		gbl_insertionOptionsPanel.columnWidths = new int[]
+		{
+				0, 0
+		};
+		gbl_insertionOptionsPanel.rowHeights = new int[]
+		{
+				0, 0, 0
+		};
+		gbl_insertionOptionsPanel.columnWeights = new double[]
+		{
+				1.0, Double.MIN_VALUE
+		};
+		gbl_insertionOptionsPanel.rowWeights = new double[]
+		{
+				0.0, 0.0, Double.MIN_VALUE
+		};
+		insertionOptionsPanel.setLayout(gbl_insertionOptionsPanel);
+
+		final JPanel insertionMinMaxPanel = new JPanel();
+		insertionMinMaxPanel.setBorder(new TitledBorder(null, "Min/Max", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		final GridBagConstraints gbc_insertionMinMaxPanel = new GridBagConstraints();
+		gbc_insertionMinMaxPanel.ipadx = 40;
+		gbc_insertionMinMaxPanel.anchor = GridBagConstraints.PAGE_START;
+		gbc_insertionMinMaxPanel.insets = new Insets(0, 0, 5, 0);
+		gbc_insertionMinMaxPanel.fill = GridBagConstraints.HORIZONTAL;
+		gbc_insertionMinMaxPanel.gridx = 0;
+		gbc_insertionMinMaxPanel.gridy = 0;
+		insertionOptionsPanel.add(insertionMinMaxPanel, gbc_insertionMinMaxPanel);
+		insertionMinMaxPanel.setLayout(new BoxLayout(insertionMinMaxPanel, BoxLayout.LINE_AXIS));
+
+		insertionMinSpinner = new JSpinner();
+		insertionMinSpinner.setModel(new SpinnerNumberModel(4, 1, 10000, 1));
+		insertionMinMaxPanel.add(insertionMinSpinner);
+
+		final JLabel insertionMinMaxLabel = new JLabel(" - ");
+		insertionMinMaxPanel.add(insertionMinMaxLabel);
+
+		insertionMaxSpinner = new JSpinner();
+		insertionMaxSpinner.setModel(new SpinnerNumberModel(8, 1, 10000, 1));
+		insertionMinMaxPanel.add(insertionMaxSpinner);
+
+		final JPanel insertionTablePresetsPanel = new JPanel();
+		insertionTablePresetsPanel.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Table Presets", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
+		final GridBagConstraints gbc_insertionTablePresetsPanel = new GridBagConstraints();
+		gbc_insertionTablePresetsPanel.anchor = GridBagConstraints.PAGE_START;
+		gbc_insertionTablePresetsPanel.fill = GridBagConstraints.HORIZONTAL;
+		gbc_insertionTablePresetsPanel.gridx = 0;
+		gbc_insertionTablePresetsPanel.gridy = 1;
+		insertionOptionsPanel.add(insertionTablePresetsPanel, gbc_insertionTablePresetsPanel);
+		insertionTablePresetsPanel.setLayout(new BorderLayout(0, 0));
+
+		final JComboBox<InsertionTablePresets> insertionTablePresets = new JComboBox<>();
+		insertionTablePresetsPanel.add(insertionTablePresets, BorderLayout.CENTER);
+
+		// Convert Button
+		convertButton.addActionListener(e ->
+		{
+			convertButton.setEnabled(false);
+
+			MultiThreading.getDefaultWorkers().submit(() ->
+			{
+				try
+				{
+					doFancify();
+				}
+				catch (final Throwable t)
+				{
+					Main.exceptionMessageBox("Error while fancification", "Exception occurred during fancification", t);
+				}
+				finally
+				{
+					convertButton.setEnabled(true);
+				}
+			});
+		});
+
 		// ConvertFrom list model
 		convertFrom.setModel(new AbstractListModel<String>()
 		{
@@ -327,148 +640,6 @@ public final class TextFancifyTab extends JPanel
 
 		keyField.setText(convertFrom.getSelectedIndex() == -1 ? "" : String.valueOf(conversionMap.get(convertFrom.getSelectedIndex()).getKey()));
 
-		convertFrom.addListSelectionListener(e ->
-		{
-			keyField.setText(convertFrom.getSelectedIndex() == -1 ? "" : String.valueOf(conversionMap.get(convertFrom.getSelectedIndex()).getKey()));
-
-			keyField.updateUI();
-			convertTo.updateUI();
-		});
-
-		addConversionKeyButton.addActionListener(e ->
-		{
-			if (!keyField.getText().isEmpty() && conversionMap.stream().noneMatch(conversion -> conversion.getKey().equals(keyField.getText())))
-				conversionMap.add(createEntry(keyField.getText(), new ArrayList<>(0)));
-
-			convertFrom.updateUI();
-		});
-
-		applyConversionKeyButton.addActionListener(e ->
-		{
-			if (keyField.getText().isEmpty())
-				conversionMap.remove(convertFrom.getSelectedIndex());
-			else
-			{
-				final List<String> backup = conversionMap.get(convertFrom.getSelectedIndex()).getValue();
-				conversionMap.remove(convertFrom.getSelectedIndex()); // Backup and Remove
-				conversionMap.add(createEntry(keyField.getText(), backup)); // Re-add
-			}
-			convertFrom.updateUI();
-		});
-
-		// Conversion Table - Convert to panel
-		final JPanel convertToPanel = new JPanel();
-		convertToPanel.setBorder(new TitledBorder(null, "Will be converted to", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
-		final GridBagConstraints gbc_convertToPanel = new GridBagConstraints();
-		gbc_convertToPanel.gridwidth = 1;
-		gbc_convertToPanel.fill = GridBagConstraints.BOTH;
-		gbc_convertToPanel.gridx = 0;
-		gbc_convertToPanel.gridy = 1;
-		conversionTablePanel.add(convertToPanel, gbc_convertToPanel);
-		final GridBagLayout gbl_convertToPanel = new GridBagLayout();
-		gbl_convertToPanel.columnWidths = new int[]
-		{
-				0, 0, 0, 0
-		};
-		gbl_convertToPanel.rowHeights = new int[]
-		{
-				0, 0, 0, 0
-		};
-		gbl_convertToPanel.columnWeights = new double[]
-		{
-				1.0, 0.0, 0.0, Double.MIN_VALUE
-		};
-		gbl_convertToPanel.rowWeights = new double[]
-		{
-				1.0, 0.0, 0.0, Double.MIN_VALUE
-		};
-		convertToPanel.setLayout(gbl_convertToPanel);
-
-		// Conversion Table - Convert to panel - Convert to list scroll pane - Convert to list
-		convertTo = new JList<>();
-		final GridBagConstraints gbc_convertTo = new GridBagConstraints();
-		gbc_convertTo.gridwidth = 3;
-		gbc_convertTo.insets = new Insets(0, 0, 5, 0);
-		gbc_convertTo.anchor = GridBagConstraints.PAGE_START;
-		gbc_convertTo.fill = GridBagConstraints.HORIZONTAL;
-		gbc_convertTo.gridx = 0;
-		gbc_convertTo.gridy = 1;
-		gbc_convertTo.ipady = 10;
-
-		// Conversion Table - Convert to panel - Convert to list scroll pane
-		final JScrollPane convertToScroll = new JScrollPane();
-		final GridBagConstraints gbc_convertToScroll = new GridBagConstraints();
-		gbc_convertToScroll.ipady = 120;
-		gbc_convertToScroll.gridwidth = 3;
-		gbc_convertToScroll.insets = new Insets(0, 0, 5, 0);
-		gbc_convertToScroll.fill = GridBagConstraints.BOTH;
-		gbc_convertToScroll.gridx = 0;
-		gbc_convertToScroll.gridy = 0;
-		convertToScroll.setViewportView(convertTo);
-		convertToPanel.add(convertToScroll, gbc_convertToScroll);
-
-		// Conversion Table - Convert to panel - Selected list component manipulation field
-		valueField = new JTextField();
-		final GridBagConstraints gbc_valueField = new GridBagConstraints();
-		gbc_valueField.insets = new Insets(0, 0, 5, 5);
-		gbc_valueField.fill = GridBagConstraints.HORIZONTAL;
-		gbc_valueField.gridx = 0;
-		gbc_valueField.gridy = 1;
-		convertToPanel.add(valueField, gbc_valueField);
-		valueField.setColumns(10);
-
-		// Conversion Table - Convert to panel - Add button
-		final JButton addConversionValueButton = new JButton("Add");
-		final GridBagConstraints gbc_addConversionValueButton = new GridBagConstraints();
-		gbc_addConversionValueButton.insets = new Insets(0, 0, 5, 5);
-		gbc_addConversionValueButton.gridx = 1;
-		gbc_addConversionValueButton.gridy = 1;
-		convertToPanel.add(addConversionValueButton, gbc_addConversionValueButton);
-
-		// Conversion Table - Convert to panel - Apply change button
-		final JButton applyConversionValueButton = new JButton("Apply change");
-		final GridBagConstraints gbc_applyConversionValueButton = new GridBagConstraints();
-		gbc_applyConversionValueButton.insets = new Insets(0, 0, 5, 0);
-		gbc_applyConversionValueButton.gridx = 2;
-		gbc_applyConversionValueButton.gridy = 1;
-		convertToPanel.add(applyConversionValueButton, gbc_applyConversionValueButton);
-
-		// Conversion Table - Conversion table presets panel
-		final JPanel conversionTablePresetsPanel = new JPanel();
-		conversionTablePresetsPanel.setBorder(new TitledBorder(null, "Conversion table presets", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
-		final GridBagConstraints gbc_conversionTablePresetsPanel = new GridBagConstraints();
-		gbc_conversionTablePresetsPanel.anchor = GridBagConstraints.FIRST_LINE_START;
-		gbc_conversionTablePresetsPanel.insets = new Insets(0, 0, 0, 5);
-		gbc_conversionTablePresetsPanel.gridx = 0;
-		gbc_conversionTablePresetsPanel.gridy = 2;
-		convertToPanel.add(conversionTablePresetsPanel, gbc_conversionTablePresetsPanel);
-		final GridBagLayout gbl_conversionTablePresetsPanel = new GridBagLayout();
-		gbl_conversionTablePresetsPanel.columnWidths = new int[]
-		{
-				0, 0
-		};
-		gbl_conversionTablePresetsPanel.rowHeights = new int[]
-		{
-				0, 0
-		};
-		gbl_conversionTablePresetsPanel.columnWeights = new double[]
-		{
-				1.0, Double.MIN_VALUE
-		};
-		gbl_conversionTablePresetsPanel.rowWeights = new double[]
-		{
-				0.0, Double.MIN_VALUE
-		};
-		conversionTablePresetsPanel.setLayout(gbl_conversionTablePresetsPanel);
-
-		// Conversion Table - Conversion table presets panel - Conversion table presets combo box
-		final JComboBox<ConversionTablePresets> conversionTablePresets = new JComboBox<>();
-		final GridBagConstraints gbc_conversionTablePresets = new GridBagConstraints();
-		gbc_conversionTablePresets.fill = GridBagConstraints.HORIZONTAL;
-		gbc_conversionTablePresets.gridx = 0;
-		gbc_conversionTablePresets.gridy = 0;
-		conversionTablePresetsPanel.add(conversionTablePresets, gbc_conversionTablePresets);
-
 		// ConvertTo list model
 		convertTo.setModel(new AbstractListModel<String>()
 		{
@@ -488,11 +659,6 @@ public final class TextFancifyTab extends JPanel
 				return conversionMap.get(convertFrom.getSelectedIndex()).getValue().get(index);
 			}
 		});
-
-		// Conversion table presets combo box model
-		conversionTablePresets.setModel(new DefaultComboBoxModel<>(ConversionTablePresets.values()));
-
-		valueField.setText(convertFrom.getSelectedIndex() != -1 && convertTo.getSelectedIndex() != -1 ? conversionMap.get(convertFrom.getSelectedIndex()).getValue().get(convertTo.getSelectedIndex()) : "");
 
 		convertTo.addListSelectionListener(e ->
 		{
@@ -524,6 +690,40 @@ public final class TextFancifyTab extends JPanel
 			convertTo.updateUI();
 		});
 
+		convertFrom.addListSelectionListener(e ->
+		{
+			keyField.setText(convertFrom.getSelectedIndex() == -1 ? "" : String.valueOf(conversionMap.get(convertFrom.getSelectedIndex()).getKey()));
+
+			keyField.updateUI();
+			convertTo.updateUI();
+		});
+
+		addConversionKeyButton.addActionListener(e ->
+		{
+			if (!keyField.getText().isEmpty() && conversionMap.stream().noneMatch(conversion -> conversion.getKey().equals(keyField.getText())))
+				conversionMap.add(createEntry(keyField.getText(), new ArrayList<>(0)));
+
+			convertFrom.updateUI();
+		});
+
+		applyConversionKeyButton.addActionListener(e ->
+		{
+			if (keyField.getText().isEmpty())
+				conversionMap.remove(convertFrom.getSelectedIndex());
+			else
+			{
+				final List<String> backup = conversionMap.get(convertFrom.getSelectedIndex()).getValue();
+				conversionMap.remove(convertFrom.getSelectedIndex()); // Backup and Remove
+				conversionMap.add(createEntry(keyField.getText(), backup)); // Re-add
+			}
+			convertFrom.updateUI();
+		});
+
+		// Conversion table presets combo box model
+		conversionTablePresets.setModel(new DefaultComboBoxModel<>(ConversionTablePresets.values()));
+
+		valueField.setText(convertFrom.getSelectedIndex() != -1 && convertTo.getSelectedIndex() != -1 ? conversionMap.get(convertFrom.getSelectedIndex()).getValue().get(convertTo.getSelectedIndex()) : "");
+
 		conversionTablePresets.addActionListener(e ->
 		{
 			if (conversionTablePresets.getSelectedIndex() != -1)
@@ -531,6 +731,99 @@ public final class TextFancifyTab extends JPanel
 				initDefaultConversionMap((ConversionTablePresets) conversionTablePresets.getSelectedItem());
 				convertFrom.updateUI();
 				convertTo.updateUI();
+			}
+		});
+
+		addInsertionValueButton.addActionListener(e ->
+		{
+			final String newCandidate = insertionValueField.getText();
+
+			if (!newCandidate.isEmpty() && !insertionList.contains(newCandidate))
+				insertionList.add(newCandidate);
+
+			insertionTable.updateUI();
+		});
+
+		applyInsertionValueButton.addActionListener(e ->
+		{
+			if (insertionValueField.getText().isEmpty())
+				insertionList.remove(insertionTable.getSelectedIndex());
+			else
+				insertionList.set(insertionTable.getSelectedIndex(), insertionValueField.getText());
+			insertionTable.updateUI();
+		});
+
+		conversionEnabledCB.addActionListener(e ->
+		{
+			final boolean enabled = conversionEnabledCB.isSelected();
+			conversionOptionsPanel.setEnabled(enabled);
+			conversionCaseSensitiveCB.setEnabled(enabled);
+			conversionRatePanel.setEnabled(enabled);
+			conversionRateSpinner.setEnabled(enabled);
+			conversionTablePresetsPanel.setEnabled(enabled);
+			conversionTablePresets.setEnabled(enabled);
+
+			conversionTabelPanel.setEnabled(enabled);
+			convertFromPanel.setEnabled(enabled);
+			convertFrom.setEnabled(enabled);
+			addConversionKeyButton.setEnabled(enabled);
+			addConversionValueButton.setEnabled(enabled);
+			applyConversionKeyButton.setEnabled(enabled);
+			applyConversionValueButton.setEnabled(enabled);
+			convertToPanel.setEnabled(enabled);
+			convertTo.setEnabled(enabled);
+		});
+
+		insertionEnabledCB.addActionListener(e ->
+		{
+			final boolean enabled = insertionEnabledCB.isSelected();
+			insertionOptionsPanel.setEnabled(enabled);
+			insertionMinMaxPanel.setEnabled(enabled);
+			insertionMinSpinner.setEnabled(enabled);
+			insertionMaxSpinner.setEnabled(enabled);
+			insertionTablePresetsPanel.setEnabled(enabled);
+			insertionTablePresets.setEnabled(enabled);
+
+			insertionTablePanel.setEnabled(enabled);
+			insertionTable.setEnabled(enabled);
+			addInsertionValueButton.setEnabled(enabled);
+			applyInsertionValueButton.setEnabled(enabled);
+		});
+
+		insertionTable.setModel(new AbstractListModel<String>()
+		{
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public int getSize()
+			{
+				return insertionList.size();
+			}
+
+			@Override
+			public String getElementAt(final int index)
+			{
+				return insertionList.get(index);
+			}
+		});
+
+		insertionTable.addListSelectionListener(e ->
+		{
+			final int index = insertionTable.getSelectedIndex();
+			insertionValueField.setText(index == -1 ? "" : insertionList.get(index));
+			insertionValueField.updateUI();
+		});
+
+		insertionValueField.setText(insertionTable.getSelectedIndex() == -1 ? "" : insertionList.get(insertionTable.getSelectedIndex()));
+
+		insertionTablePresets.setModel(new DefaultComboBoxModel<>(InsertionTablePresets.values()));
+
+		insertionTablePresets.addActionListener(e ->
+		{
+			if (insertionTablePresets.getSelectedIndex() != -1)
+			{
+				initDefaultInsertionMap((InsertionTablePresets) insertionTablePresets.getSelectedItem());
+				insertionTable.updateUI();
 			}
 		});
 	}
@@ -545,26 +838,75 @@ public final class TextFancifyTab extends JPanel
 		preset.apply(conversionMap);
 	}
 
+	private void initDefaultInsertionMap(final InsertionTablePresets preset)
+	{
+		if (insertionList == null)
+			insertionList = new Vector<>();
+		else
+			insertionList.clear();
+
+		preset.apply(insertionList);
+	}
+
 	private static <K, V> Entry<K, V> createEntry(final K key, final V value)
 	{
 		return new SimpleImmutableEntry<>(key, value);
 	}
 
 	@SuppressWarnings("WeakerAccess")
-	boolean doConvert()
+	void doFancify()
 	{
 		final String input = textInputField.getText();
 		final Random random = new Random();
-		final boolean caseSensitive = caseSensitiveCB.isSelected();
-		final double convertRate = (int) convertRateSpinner.getValue() / 100.0;
 
 		if (input == null || input.isEmpty())
 		{
 			textInputField.grabFocus();
 			textInputField.setCaretColor(Color.red);
-			return false;
+			return;
 		}
+
 		textInputField.setCaretColor(Color.black);
+
+		final String output = performInsertion(performConversion(input, random), random);
+		if (insertionEnabledCB.isSelected())
+		{
+			Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(output), null);
+			textOutputField.setText("Copied to clipboard (Because Java swing glyph renderer doesn't properly support combining characters)");
+		}
+		else
+			textOutputField.setText(output);
+		textOutputField.updateUI();
+	}
+
+	private String performInsertion(final String input, final Random random)
+	{
+		if (!insertionEnabledCB.isSelected())
+			return input;
+
+		final int minimum = (int) insertionMinSpinner.getValue();
+		final int maximum = (int) insertionMinSpinner.getValue();
+
+		final char[] charArray = input.toCharArray();
+		final StringBuilder outputBuilder = new StringBuilder(charArray.length << 1);
+		for (final char c : charArray)
+		{
+			outputBuilder.append(c);
+			final int count = maximum > minimum ? minimum + random.nextInt(maximum - minimum) : minimum;
+			for (int i = 0; i < count; i++)
+				outputBuilder.append(insertionList.get(random.nextInt(insertionList.size())));
+		}
+
+		return outputBuilder.toString();
+	}
+
+	private String performConversion(final String input, final Random random)
+	{
+		if (!conversionEnabledCB.isSelected())
+			return input;
+
+		final boolean caseSensitive = conversionCaseSensitiveCB.isSelected();
+		final double convertRate = (int) conversionRateSpinner.getValue() / 100.0;
 
 		// TODO: I know this is the worst solution for the problem. Fix it later when the better solution found.
 		final List<Entry<String, List<String>>> fixedConversionMap = new ArrayList<>(conversionMap.size());
@@ -633,9 +975,6 @@ public final class TextFancifyTab extends JPanel
 				outputBuilder.append(currentChar);
 		}
 
-		textOutputField.setText(outputBuilder.toString());
-		textOutputField.updateUI();
-
-		return true;
+		return outputBuilder.toString();
 	}
 }

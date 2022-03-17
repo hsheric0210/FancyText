@@ -158,8 +158,8 @@ public final class Main extends JFrame
 			final JScrollPane scroll = new JScrollPane(new TextFancifyTab());
 			scroll.getHorizontalScrollBar().setUnitIncrement(scrollSize);
 			scroll.getVerticalScrollBar().setUnitIncrement(scrollSize);
-			EventQueue.invokeLater(() -> tabs.addTab("Translater", scroll));
-			LOGGER.info("Translater tab loaded");
+			EventQueue.invokeLater(() -> tabs.addTab("Fancifier", scroll));
+			LOGGER.info("Fancifier tab loaded");
 		});
 		tasks.add(() ->
 		{
