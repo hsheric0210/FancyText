@@ -15,6 +15,7 @@ import javax.swing.border.TitledBorder;
 
 import fancytext.Main;
 import fancytext.utils.MultiThreading;
+import fancytext.utils.SimpleDocumentListener;
 
 public final class TextFancifyTab extends JPanel
 {
@@ -37,10 +38,11 @@ public final class TextFancifyTab extends JPanel
 	private final JList<String> insertionTable;
 	private final JSpinner insertionMinSpinner;
 	private final JSpinner insertionMaxSpinner;
+	private final JCheckBox realtimeUpdateCB;
 
 	public TextFancifyTab()
 	{
-		initDefaultConversionMap(ConversionTablePresets.LEET);
+		initDefaultConversionMap(ConversionTablePresets.LEET_SIMPLIFIED);
 		initDefaultInsertionMap(InsertionTablePresets.COMBINING_DIACRITICAL_MARKS);
 
 		setSize(1000, 1000); // TODO: remove it
@@ -166,7 +168,7 @@ public final class TextFancifyTab extends JPanel
 		gbc_convertButton.gridy = 2;
 		add(convertButton, gbc_convertButton);
 
-		final JCheckBox realtimeUpdateCB = new JCheckBox("Real-time update");
+		realtimeUpdateCB = new JCheckBox("Real-time update");
 		final GridBagConstraints gbc_realtimeUpdateCB = new GridBagConstraints();
 		gbc_realtimeUpdateCB.gridwidth = 2;
 		gbc_realtimeUpdateCB.insets = new Insets(0, 0, 5, 0);
@@ -289,7 +291,7 @@ public final class TextFancifyTab extends JPanel
 		gbc_addConversionKeyButton.gridy = 1;
 		convertFromPanel.add(addConversionKeyButton, gbc_addConversionKeyButton);
 
-		final JButton applyConversionKeyButton = new JButton("Apply change");
+		final JButton applyConversionKeyButton = new JButton("Edit/Delete");
 		final GridBagConstraints gbc_applyConversionKeyButton = new GridBagConstraints();
 		gbc_applyConversionKeyButton.gridx = 2;
 		gbc_applyConversionKeyButton.gridy = 1;
@@ -355,8 +357,8 @@ public final class TextFancifyTab extends JPanel
 		gbc_addConversionValueButton.gridy = 1;
 		convertToPanel.add(addConversionValueButton, gbc_addConversionValueButton);
 
-		// Conversion Table - Convert to panel - Apply change button
-		final JButton applyConversionValueButton = new JButton("Apply change");
+		// Conversion Table - Convert to panel - Edit/Delete button
+		final JButton applyConversionValueButton = new JButton("Edit/Delete");
 		final GridBagConstraints gbc_applyConversionValueButton = new GridBagConstraints();
 		gbc_applyConversionValueButton.gridx = 2;
 		gbc_applyConversionValueButton.gridy = 1;
@@ -503,9 +505,11 @@ public final class TextFancifyTab extends JPanel
 
 		insertionTable = new JList<>();
 		insertionTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		insertionTable.setEnabled(false);
 		insertionTableScrollPane.setViewportView(insertionTable);
 
 		final JTextField insertionValueField = new JTextField();
+		insertionValueField.setEnabled(false);
 		insertionValueField.setText("");
 		insertionValueField.setColumns(10);
 		final GridBagConstraints gbc_insertionValueField = new GridBagConstraints();
@@ -516,13 +520,14 @@ public final class TextFancifyTab extends JPanel
 		insertionTablePanel.add(insertionValueField, gbc_insertionValueField);
 
 		final JButton addInsertionValueButton = new JButton("Add");
+		addInsertionValueButton.setEnabled(false);
 		final GridBagConstraints gbc_addInsertionValueButton = new GridBagConstraints();
 		gbc_addInsertionValueButton.insets = new Insets(0, 0, 0, 5);
 		gbc_addInsertionValueButton.gridx = 1;
 		gbc_addInsertionValueButton.gridy = 1;
 		insertionTablePanel.add(addInsertionValueButton, gbc_addInsertionValueButton);
 
-		final JButton applyInsertionValueButton = new JButton("Apply change");
+		final JButton applyInsertionValueButton = new JButton("Edit/Delete");
 		final GridBagConstraints gbc_applyInsertionValueButton = new GridBagConstraints();
 		gbc_applyInsertionValueButton.gridx = 2;
 		gbc_applyInsertionValueButton.gridy = 1;
@@ -538,6 +543,7 @@ public final class TextFancifyTab extends JPanel
 
 		final JPanel insertionOptionsPanel = new JPanel();
 		insertionOptionsPanel.setBorder(new TitledBorder(null, "Options", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		insertionOptionsPanel.setEnabled(false);
 		final GridBagConstraints gbc_insertionOptionsPanel = new GridBagConstraints();
 		gbc_insertionOptionsPanel.fill = GridBagConstraints.BOTH;
 		gbc_insertionOptionsPanel.gridx = 1;
@@ -564,6 +570,7 @@ public final class TextFancifyTab extends JPanel
 
 		final JPanel insertionMinMaxPanel = new JPanel();
 		insertionMinMaxPanel.setBorder(new TitledBorder(null, "Min/Max", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		insertionMinMaxPanel.setEnabled(false);
 		final GridBagConstraints gbc_insertionMinMaxPanel = new GridBagConstraints();
 		gbc_insertionMinMaxPanel.ipadx = 40;
 		gbc_insertionMinMaxPanel.anchor = GridBagConstraints.PAGE_START;
@@ -575,6 +582,7 @@ public final class TextFancifyTab extends JPanel
 		insertionMinMaxPanel.setLayout(new BoxLayout(insertionMinMaxPanel, BoxLayout.LINE_AXIS));
 
 		insertionMinSpinner = new JSpinner();
+		insertionMinSpinner.setEnabled(false);
 		insertionMinSpinner.setModel(new SpinnerNumberModel(4, 1, 10000, 1));
 		insertionMinMaxPanel.add(insertionMinSpinner);
 
@@ -582,11 +590,13 @@ public final class TextFancifyTab extends JPanel
 		insertionMinMaxPanel.add(insertionMinMaxLabel);
 
 		insertionMaxSpinner = new JSpinner();
+		insertionMaxSpinner.setEnabled(false);
 		insertionMaxSpinner.setModel(new SpinnerNumberModel(8, 1, 10000, 1));
 		insertionMinMaxPanel.add(insertionMaxSpinner);
 
 		final JPanel insertionTablePresetsPanel = new JPanel();
 		insertionTablePresetsPanel.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Table Presets", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
+		insertionTablePresetsPanel.setEnabled(false);
 		final GridBagConstraints gbc_insertionTablePresetsPanel = new GridBagConstraints();
 		gbc_insertionTablePresetsPanel.anchor = GridBagConstraints.PAGE_START;
 		gbc_insertionTablePresetsPanel.fill = GridBagConstraints.HORIZONTAL;
@@ -596,6 +606,7 @@ public final class TextFancifyTab extends JPanel
 		insertionTablePresetsPanel.setLayout(new BorderLayout(0, 0));
 
 		final JComboBox<InsertionTablePresets> insertionTablePresets = new JComboBox<>();
+		insertionTablePresets.setEnabled(false);
 		insertionTablePresetsPanel.add(insertionTablePresets, BorderLayout.CENTER);
 
 		// Convert Button
@@ -731,6 +742,9 @@ public final class TextFancifyTab extends JPanel
 				initDefaultConversionMap((ConversionTablePresets) conversionTablePresets.getSelectedItem());
 				convertFrom.updateUI();
 				convertTo.updateUI();
+
+				if (isRealtimeUpdateEnabled())
+					doRealtimeUpdate();
 			}
 		});
 
@@ -770,6 +784,8 @@ public final class TextFancifyTab extends JPanel
 			addConversionValueButton.setEnabled(enabled);
 			applyConversionKeyButton.setEnabled(enabled);
 			applyConversionValueButton.setEnabled(enabled);
+			keyField.setEnabled(enabled);
+			valueField.setEnabled(enabled);
 			convertToPanel.setEnabled(enabled);
 			convertTo.setEnabled(enabled);
 		});
@@ -786,8 +802,11 @@ public final class TextFancifyTab extends JPanel
 
 			insertionTablePanel.setEnabled(enabled);
 			insertionTable.setEnabled(enabled);
+			insertionValueField.setEnabled(enabled);
 			addInsertionValueButton.setEnabled(enabled);
 			applyInsertionValueButton.setEnabled(enabled);
+
+			realtimeUpdateCB.setEnabled(!enabled);
 		});
 
 		insertionTable.setModel(new AbstractListModel<String>()
@@ -826,6 +845,54 @@ public final class TextFancifyTab extends JPanel
 				insertionTable.updateUI();
 			}
 		});
+
+		textInputField.getStyledDocument().addDocumentListener(new SimpleDocumentListener(() ->
+		{
+			if (isRealtimeUpdateEnabled())
+				doRealtimeUpdate();
+		}));
+
+		realtimeUpdateCB.addActionListener(e ->
+		{
+			if (isRealtimeUpdateEnabled())
+				doRealtimeUpdate();
+		});
+
+		conversionCaseSensitiveCB.addActionListener(e ->
+		{
+			if (isRealtimeUpdateEnabled())
+				doRealtimeUpdate();
+		});
+
+		conversionRateSpinner.addChangeListener(e ->
+		{
+			if (isRealtimeUpdateEnabled())
+				doRealtimeUpdate();
+		});
+	}
+
+	private boolean isRealtimeUpdateAvailable()
+	{
+		return !insertionEnabledCB.isSelected();
+	}
+
+	private boolean isRealtimeUpdateEnabled()
+	{
+		return isRealtimeUpdateAvailable() && realtimeUpdateCB.isSelected();
+	}
+
+	private void doRealtimeUpdate()
+	{
+		final String input = textInputField.getText();
+
+		if (input == null || input.isEmpty())
+		{
+			textOutputField.setText("");
+			return;
+		}
+
+		textOutputField.setText(performConversion(input, new Random()));
+		textOutputField.updateUI();
 	}
 
 	private void initDefaultConversionMap(final ConversionTablePresets preset)
@@ -872,7 +939,7 @@ public final class TextFancifyTab extends JPanel
 		if (insertionEnabledCB.isSelected())
 		{
 			Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(output), null);
-			textOutputField.setText("Copied to clipboard (Because Java swing glyph renderer doesn't properly support combining characters)");
+			textOutputField.setText("Copied to clipboard (Because Java swing glyph renderer doesn't properly support multiple combining characters)");
 		}
 		else
 			textOutputField.setText(output);

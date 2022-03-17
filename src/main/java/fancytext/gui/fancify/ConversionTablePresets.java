@@ -8,8 +8,11 @@ import fancytext.utils.MultiThreading;
 
 enum ConversionTablePresets
 {
-	LEET("1337 5p34k"),
-	DIACRITICS("Ďiăcritičš"),
+	LEET_SIMPLIFIED("S1mplif3ed L33TSp3@k"),
+	LEET("13375p34k"),
+	DIACRITICS_SIMPLIFIED("Ŝïṁpľïﬁȅḍ ḋìǎčŕįṱǐćṣ"),
+	DIACRITICS("Ðỉãçŕĩţíĉș"),
+	FAKE_RUSSIAN_SIMPLIFIED("Simҏlified Fӓkє Rцssїan"),
 	FAKE_RUSSIAN("Ғakє ЯussiaЙ"),
 	CURRENCY_SYMBOLS("₵urrenc¥ $yℳ₿ol$");
 
@@ -30,8 +33,14 @@ enum ConversionTablePresets
 	{
 		switch (this)
 		{
+			case LEET_SIMPLIFIED:
+				applyLeetspeakSimplified(conversionMap);
+				break;
 			case LEET:
-				apply1337(conversionMap);
+				applyLeetspeak(conversionMap);
+				break;
+			case DIACRITICS_SIMPLIFIED:
+				applyDiacriticsSimplified(conversionMap);
 				break;
 			case DIACRITICS:
 				applyDiacritics(conversionMap);
@@ -45,162 +54,308 @@ enum ConversionTablePresets
 		}
 	}
 
-	private static void apply1337(final Collection<? super Entry<String, List<String>>> conversionMap)
+	private static Map<String, List<String>> leetspeak_simplified;
+	private static Map<String, List<String>> leetspeak;
+	private static Map<String, List<String>> diacritics_simplified;
+	private static Map<String, List<String>> diacritics;
+
+	private static void initializeLeetspeak()
 	{
-		final Collection<Runnable> work = new ArrayDeque<>(36);
-
-		// <editor-fold desc="Alphabets">
-		conversionMap.add(createEntry("A", createList("4", "/\\", "@", "/-\\", "^", "aye", "(L", "Д")));
-		conversionMap.add(createEntry("B", createList("I3", "8", "13", "|3", "ß", "!3", "(3", "/3", ")3", "|-]", "j3", "6")));
-		conversionMap.add(createEntry("D", createList(")", "|)", "(|", "[)", "I>", "|>", "T)", "I7", "cl", "|}", ">", "|]")));
-		conversionMap.add(createEntry("E", createList("3", "&", "£", "€", "ë", "[-", "|=-")));
-		conversionMap.add(createEntry("C", createList("[", "¢", "{", "<", "(", "©")));
-		conversionMap.add(createEntry("F", createList("|=", "ƒ", "|#", "ph", "/=", "v")));
-		conversionMap.add(createEntry("G", createList("&", "6", "(_,", "9", "C-", "gee", "(?,", "[,", "{,", "<-", "(.")));
-		conversionMap.add(createEntry("H", createList("#", "/-/", "[-]", "]-[", ")-(", "(-)", ":-:", "|~|", "|-|", "]~[", "}{", "!-!", "1-1", "\\-/", "I,I", "/-\\")));
-		conversionMap.add(createEntry("I", createList("1", "[]", "|", "!", "eye", "3y3", "][")));
-		conversionMap.add(createEntry("J", createList(",_|", "_|", "._|", "._]", "_]", ",_]", "]", ";", "1")));
-		conversionMap.add(createEntry("K", createList(">|", "|<", "/<", "1<", "|c", "|(", "|{")));
-		conversionMap.add(createEntry("L", createList("1", "£", "7", "|_", "|")));
-		conversionMap.add(createEntry("M", createList("/\\/\\", "/V\\", "JVI", "[V]", "[]V[]", "|\\/|", "^^", "<\\/>", "{V}", "(v)", "(V)", "|V|", "nn", "IVI", "|\\|\\", "]\\/[", "1^1", "ITI", "JTI")));
-		conversionMap.add(createEntry("N", createList("^/", "|\\|", "/\\/", "[\\]", "<\\>", "{\\}", "|V", "/V", "И", "^", "ท")));
-		conversionMap.add(createEntry("O", createList("0", "Q", "()", "oh", "[]", "p", "<>", "Ø")));
-		conversionMap.add(createEntry("P", createList("|*", "|o", "|º", "?", "|^", "|>", "|\"", "9", "[]D", "|°", "|7")));
-		conversionMap.add(createEntry("Q", createList("(_,)", "9", "()_", "2", "0_", "<|", "&")));
-		conversionMap.add(createEntry("R", createList("I2", "|`", "|~", "|?", "/2", "|^", "lz", "|9", "2", "12", "®", "[z", "Я", ".-", "|2", "|-")));
-		conversionMap.add(createEntry("S", createList("5", "$", "z", "§", "ehs", "es", "2")));
-		conversionMap.add(createEntry("T", createList("7", "+", "-|-", "']['", "†", "\"|\"", "~|~")));
-		conversionMap.add(createEntry("U", createList("(_)", "|_|", "v", "L|", "µ", "บ")));
-		conversionMap.add(createEntry("V", createList("\\/", "|/", "\\|")));
-		conversionMap.add(createEntry("W", createList("\\/\\/", "VV", "\\N", "'//", "\\\\'", "\\^/", "(n)", "\\V/", "\\X/", "\\|/", "\\_|_/", "\\_:_/", "Ш", "Щ", "uu", "2u", "\\\\//\\\\//", "พ", "v²")));
-		conversionMap.add(createEntry("X", createList("><", "Ж", "}{", "ecks", "×", "?", ")(", "][")));
-		conversionMap.add(createEntry("Y", createList("j", "`/", "Ч", "7", "\\|/", "¥", "\\//")));
-		conversionMap.add(createEntry("Z", createList("2", "7_", "-/_", "%", ">_", "s", "~/_", "-\\_", "-|_")));
-		// </editor-fold>
-
-		// <editor-fold desc="Numbers">
-		conversionMap.add(createEntry("1", createList("L", "I")));
-		conversionMap.add(createEntry("2", createList("R", "Z")));
-		conversionMap.add(createEntry("3", createList("E")));
-		conversionMap.add(createEntry("4", createList("A")));
-		conversionMap.add(createEntry("5", createList("S")));
-		conversionMap.add(createEntry("6", createList("b", "G")));
-		conversionMap.add(createEntry("7", createList("T", "L")));
-		conversionMap.add(createEntry("8", createList("B")));
-		conversionMap.add(createEntry("9", createList("g", "q")));
-		conversionMap.add(createEntry("0", createList("o", "()", "[]", "Ø", "<>")));
-		// </editor-fold>
-
-		MultiThreading.submitRunnables(work);
-
 		// https://www.gamehouse.com/blog/leet-speak-cheat-sheet/
+
+		if (leetspeak_simplified == null)
+		{
+			leetspeak_simplified = new HashMap<>(37);
+
+			// <editor-fold desc="Alphabets">
+			leetspeak_simplified.put("A", createList("4", "^", "Д"));
+			leetspeak_simplified.put("B", createList("8", "ß"));
+			leetspeak_simplified.put("D", createList(")", "|>", ">", "|]"));
+			leetspeak_simplified.put("E", createList("3", "&", "£", "€", "ë"));
+			leetspeak_simplified.put("C", createList("[", "{", "<", "("));
+			leetspeak_simplified.put("G", createList("&", "6"));
+			leetspeak_simplified.put("H", createList("#", "/-/", "[-]", "]-[", ")-(", "(-)"));
+			leetspeak_simplified.put("I", createList("1", "|", "!"));
+			leetspeak_simplified.put("J", createList("]", "1"));
+			leetspeak_simplified.put("K", createList("|<", "/<"));
+			leetspeak_simplified.put("L", createList("£"));
+			leetspeak_simplified.put("M", createList("^^", "|V|", "nn", "IVI"));
+			leetspeak_simplified.put("N", createList("|\\|", "/\\/", "И"));
+			leetspeak_simplified.put("O", createList("0", "Q", "p", "Ø"));
+			leetspeak_simplified.put("P", createList("|*", "|º", "9", "|°"));
+			leetspeak_simplified.put("Q", createList("9", "2", "<|", "&"));
+			leetspeak_simplified.put("R", createList("I2", "Я", "|2"));
+			leetspeak_simplified.put("S", createList("5", "$", "z", "§"));
+			leetspeak_simplified.put("T", createList("7", "+", "†"));
+			leetspeak_simplified.put("V", createList("\\/"));
+			leetspeak_simplified.put("W", createList("\\/\\/", "Ш", "Щ", "พ", "v²"));
+			leetspeak_simplified.put("X", createList("Ж"));
+			leetspeak_simplified.put("Y", createList("j", "¥"));
+			leetspeak_simplified.put("Z", createList("2", "%", ">_", "s"));
+
+			leetspeak_simplified.put("a", createList("@", "(L"));
+			leetspeak_simplified.put("b", createList("6"));
+			leetspeak_simplified.put("c", createList("¢", "©"));
+			leetspeak_simplified.put("f", createList("ƒ"));
+			leetspeak_simplified.put("j", createList(";"));
+			leetspeak_simplified.put("l", createList("1", "7", "|"));
+			leetspeak_simplified.put("n", createList("ท"));
+			leetspeak_simplified.put("o", createList("p"));
+			leetspeak_simplified.put("r", createList("®"));
+			leetspeak_simplified.put("u", createList("µ", "บ"));
+			leetspeak_simplified.put("x", createList("×"));
+			leetspeak_simplified.put("y", createList("Ч"));
+			// </editor-fold>
+
+			// <editor-fold desc="Numbers">
+			leetspeak_simplified.put("0", createList("Ø"));
+			// </editor-fold>
+		}
+
+		if (leetspeak == null)
+		{
+			final Map<String, List<String>> _leetspeak = new HashMap<>(36);
+
+			_leetspeak.put("A", createList("/\\", "/-\\", "aye"));
+			_leetspeak.put("B", createList("I3", "13", "|3", "!3", "(3", "/3", ")3", "|-]", "j3"));
+			_leetspeak.put("D", createList("|)", "(|", "[)", "I>", "T)", "I7", "cl", "|}"));
+			_leetspeak.put("E", createList("[-", "|=-"));
+			_leetspeak.put("F", createList("|=", "|#", "ph", "/="));
+			_leetspeak.put("G", createList("(_,", "9", "C-", "gee", "(?,", "[,", "{,", "<-", "(."));
+			_leetspeak.put("H", createList(":-:", "|~|", "|-|", "]~[", "}{", "!-!", "1-1", "\\-/", "I,I", "/-\\"));
+			_leetspeak.put("I", createList("[]", "eye", "3y3", "]["));
+			_leetspeak.put("J", createList(",_|", "_|", "._|", "._]", "_]", ",_]"));
+			_leetspeak.put("K", createList(">|", "1<", "|c", "|(", "|{"));
+			_leetspeak.put("L", createList("|_"));
+			_leetspeak.put("M", createList("/\\/\\", "/V\\", "JVI", "[V]", "[]V[]", "|\\/|", "<\\/>", "{V}", "(v)", "(V)", "|\\|\\", "]\\/[", "1^1", "ITI", "JTI"));
+			_leetspeak.put("N", createList("^/", "[\\]", "<\\>", "{\\}", "|V", "/V"));
+			_leetspeak.put("O", createList("()", "oh", "[]", "<>"));
+			_leetspeak.put("P", createList("|o", "|^", "|>", "|\"", "[]D", "|7"));
+			_leetspeak.put("Q", createList("(_,)", "()_", "0_"));
+			_leetspeak.put("R", createList("|`", "|~", "/2", "|^", "lz", "|9", "12", "[z", ".-", "|-"));
+			_leetspeak.put("S", createList("ehs", "es", "2"));
+			_leetspeak.put("T", createList("-|-", "']['", "\"|\"", "~|~"));
+			_leetspeak.put("U", createList("(_)", "|_|", "L|"));
+			_leetspeak.put("V", createList("|/", "\\|"));
+			_leetspeak.put("W", createList("VV", "\\N", "'//", "\\\\'", "\\^/", "(n)", "\\V/", "\\X/", "\\|/", "\\_|_/", "\\_:_/", "uu", "2u", "\\\\//\\\\//"));
+			_leetspeak.put("X", createList("><", "}{", "ecks", ")(", "]["));
+			_leetspeak.put("Y", createList("`/", "7", "\\|/", "\\//"));
+			_leetspeak.put("Z", createList("7_", "-/_", "~/_", "-\\_", "-|_"));
+
+			_leetspeak.put("u", createList("v"));
+
+			_leetspeak.put("1", createList("L", "I"));
+			_leetspeak.put("2", createList("R", "Z"));
+			_leetspeak.put("3", createList("E"));
+			_leetspeak.put("4", createList("A"));
+			_leetspeak.put("5", createList("S"));
+			_leetspeak.put("6", createList("b", "G"));
+			_leetspeak.put("7", createList("T", "L"));
+			_leetspeak.put("8", createList("B"));
+			_leetspeak.put("9", createList("g", "q"));
+			_leetspeak.put("0", createList("o", "()", "[]", "<>"));
+
+			leetspeak = mergeMap(leetspeak_simplified, _leetspeak);
+		}
 	}
 
-	private static void applyDiacritics(final Collection<? super Entry<String, List<String>>> conversionMap)
+	private static void initializeDiacritics()
 	{
-		final Collection<Runnable> work = new ArrayDeque<>(86);
-
-		// <editor-fold desc="Capital-case alphabets"> - 36
-		conversionMap.add(createEntry("A", createList("Á", "Ă", "Ắ", "Ặ", "Ằ", "Ẳ", "Ẵ", "Ǎ", "Â", "Ấ", "Ậ", "Ầ", "Ẩ", "Ẫ", "Ä", "Ạ", "À", "Ả", "Ā", "Ą", "Å", "Ǻ", "Ã", "Ǟ", "Ǡ", "Ȁ", "Ȃ", "Ȧ", "Ⱥ", "Ʌ", "Ḁ")));
-		conversionMap.add(createEntry("AE", createList("Æ", "Ǽ", "Ǣ")));
-		conversionMap.add(createEntry("B", createList("Ḅ", "Ɓ", "ʚ", "ɞ", "Ƃ", "Ƅ", "Ƀ", "Ḃ", "Ḅ", "Ḇ")));
-		conversionMap.add(createEntry("C", createList("Ć", "Č", "Ç", "Ĉ", "Ċ", "Ɔ", "ʗ", "Ƈ", "Ȼ", "Ḉ")));
-		conversionMap.add(createEntry("D", createList("Ď", "Ḓ", "Ḍ", "Ɗ", "Ḏ", "Ḋ", "ḋ", "Ḑ", "ḑ", "Đ", "Ð", "Ɖ", "Ƌ", "ƿ")));
-		conversionMap.add(createEntry("DZ", createList("Ǳ", "Ǆ")));
-		conversionMap.add(createEntry("Dz", createList("ǲ", "ǅ")));
-		conversionMap.add(createEntry("E", createList("É", "Ĕ", "Ě", "Ê", "Ế", "Ệ", "Ề", "Ể", "Ễ", "Ë", "Ė", "Ẹ", "È", "Ẻ", "Ē", "Ę", "Ẽ", "Ɛ", "Ə", "Ǝ", "Ʃ", "Ȅ", "Ȇ", "Ȩ", "Ɇ", "Ḕ", "Ḗ", "Ḙ", "Ḛ", "Ḝ")));
-		conversionMap.add(createEntry("F", createList("Ƒ", "Ḟ")));
-		conversionMap.add(createEntry("G", createList("Ǵ", "Ğ", "Ǧ", "Ģ", "Ĝ", "Ġ", "Ḡ", "ʛ", "Ɠ", "Ǥ")));
-		conversionMap.add(createEntry("H", createList("Ḫ", "Ĥ", "Ḥ", "Ħ", "Ḣ", "Ḧ", "Ḩ")));
-		conversionMap.add(createEntry("Hu", createList("Ƕ")));
-		conversionMap.add(createEntry("Hb", createList("Њ")));
-		conversionMap.add(createEntry("I", createList("Í", "Ĭ", "Ǐ", "Î", "Ï", "İ", "Ị", "Ì", "Ỉ", "Ī", "Į", "Ĩ", "Ɨ", "ǀ", "ǂ", "Ȉ", "Ȋ", "Ḭ", "Ḯ")));
-		conversionMap.add(createEntry("IJ", createList("Ĳ")));
-		conversionMap.add(createEntry("II", createList("ǁ")));
-		conversionMap.add(createEntry("J", createList("Ĵ", "Ɉ")));
-		conversionMap.add(createEntry("K", createList("Ķ", "Ḳ", "Ƙ", "Ḵ", "Ḱ")));
-		conversionMap.add(createEntry("L", createList("Ĺ", "Ƚ", "Ľ", "Ļ", "Ḽ", "Ḷ", "Ḹ", "Ḻ", "Ŀ", "Ł")));
-		conversionMap.add(createEntry("LJ", createList("Ǉ")));
-		conversionMap.add(createEntry("Lj", createList("ǈ")));
-		conversionMap.add(createEntry("M", createList("Ḿ", "Ṁ", "Ṃ", "Ɯ")));
-		conversionMap.add(createEntry("N", createList("Ń", "Ň", "Ņ", "Ṋ", "Ṅ", "Ṇ", "Ǹ", "Ɲ", "Ŋ", "Ṉ", "Ñ", "Ƞ")));
-		conversionMap.add(createEntry("NJ", createList("Ǌ")));
-		conversionMap.add(createEntry("Nj", createList("ǋ")));
-		conversionMap.add(createEntry("O", createList("Ó", "Ŏ", "Ǒ", "Ô", "Ố", "Ộ", "Ồ", "Ổ", "Ỗ", "Ö", "Ọ", "Ő", "Ò", "Ỏ", "Ơ", "Ớ", "Ợ", "Ờ", "Ở", "Ỡ", "Ō", "Ɵ", "Ǫ", "Ø", "Ǿ", "Õ" /* , "Œ", "ɶ" */, "Ǭ", "Ȍ", "Ȏ", "Ȫ", "Ȭ", "Ȯ", "Ȱ")));
-		conversionMap.add(createEntry("OE", createList("Œ", "ɶ"))); // It's 'OE' don't be confused with 'CE'.
-		conversionMap.add(createEntry("P", createList("Þ", "Ƥ", "Ƿ")));
-		conversionMap.add(createEntry("R", createList("Ŕ", "Ř", "Ŗ", "Ṙ", "Ṛ", "Ṝ", "Ṟ", "ʁ", "Ʀ", "Ȑ", "Ȓ", "Ɍ")));
-		conversionMap.add(createEntry("S", createList("Ś", "Š", "Ş", "Ŝ", "Ș", "Ṡ", "Ṣ", "Ƨ")));
-		conversionMap.add(createEntry("SS", createList("ẞ")));
-		conversionMap.add(createEntry("T", createList("Ť", "Ţ", "Ṱ", "Ț", "Ṭ", "Ṯ", "Ŧ", "Ƭ", "Ʈ", "Ⱦ")));
-		conversionMap.add(createEntry("U", createList("Ú", "Ŭ", "Ǔ", "Û", "Ü", "Ǘ", "Ǚ", "Ǜ", "Ǖ", "Ụ", "Ű", "Ù", "Ủ", "Ư", "Ứ", "Ự", "Ừ", "Ử", "Ữ", "Ū", "Ų", "Ů", "Ũ", "Ʊ", "Ʋ", "Ȕ", "Ȗ", "Ʉ")));
-		conversionMap.add(createEntry("W", createList("Ẃ", "Ŵ", "Ẅ", "Ẁ")));
-		conversionMap.add(createEntry("Y", createList("Ý", "Ŷ", "Ÿ", "Ẏ", "Ỵ", "Ỳ", "Ƴ", "Ỷ", "Ȳ", "Ỹ", "Ɣ", "Ɏ")));
-		conversionMap.add(createEntry("Z", createList("Ź", "Ž", "Ż", "Ẓ", "Ẕ", "Ƶ", "Ȥ")));
-		// </editor-fold>
-
-		// <editor-fold desc="Lower-case alphabets"> - 44
-		conversionMap.add(createEntry("a", createList("á", "ă", "ắ", "ặ", "ằ", "ẳ", "ẵ", "ǎ", "ḁ", "â", "ấ", "ậ", "ầ", "ẩ", "ẫ", "ä", "ạ", "à", "ả", "ā", "ą", "å", "ǻ", "ã", /* "æ", "ǽ", */ "ɑ", "ɐ", "ɒ", "ǟ", "ǡ", "ȁ", "ȃ", "ȧ")));
-		conversionMap.add(createEntry("ae", createList("æ", "ǽ", "ǣ")));
-		conversionMap.add(createEntry("b", createList("ḅ", "ɓ", "ß", "ƀ", "ƃ", "ƅ", "ḃ", "ḅ", "ḇ")));
-		conversionMap.add(createEntry("c", createList("ć", "č", "ç", "ĉ", "ɕ", "ċ", "ȼ", "ḉ")));
-		conversionMap.add(createEntry("ce", createList("œ")));
-		conversionMap.add(createEntry("d", createList("ď", "ḓ", "ḍ", "ɗ", "ḏ", "đ", "ḋ", "ɖ", "ḑ", "ð", "ƌ", "ȡ")));
-		conversionMap.add(createEntry("db", createList("ȸ")));
-		conversionMap.add(createEntry("dz", createList("ʤ", "ǳ", "ʣ", "ʥ", "ǆ")));
-		conversionMap.add(createEntry("e", createList("é", "ĕ", "ě", "ê", "ế", "ệ", "ề", "ể", "ḕ", "ḗ", "ḝ", "ḛ", "ḙ", "ễ", "ë", "ė", "ẹ", "è", "ẻ", "ē", "ę", "ẽ", "ʒ", "ǯ", "ʓ", "ɘ", "ɜ", "ɝ", "ə", "ɚ", "ʚ", "ɞ", "ǝ", "ȅ", "ȇ", "ȩ", "ɇ")));
-		conversionMap.add(createEntry("f", createList("ƒ", "ſ", "ʃ", "ʆ", "ɟ", "ʄ", "ƭ", "ḟ")));
-		conversionMap.add(createEntry("fn", createList("ʩ")));
-		conversionMap.add(createEntry("fi", createList("ﬁ")));
-		conversionMap.add(createEntry("fl", createList("ﬂ")));
-		conversionMap.add(createEntry("g", createList("ǵ", "ğ", "ǧ", "ģ", "ĝ", "ġ", "ɠ", "ḡ", "ɡ", "ǥ")));
-		conversionMap.add(createEntry("h", createList("ḫ", "ĥ", "ḥ", "ɦ", "ẖ", "ħ", "ɧ", "ɥ", "ʮ", "ʯ", "ḣ", "ḧ", "ḩ")));
-		conversionMap.add(createEntry("hv", createList("ƕ")));
-		conversionMap.add(createEntry("i", createList("í", "ĭ", "ǐ", "î", "ï", "ị", "ì", "ỉ", "ī", "į", "ɨ", "ĩ", "ɩ", "ı"/* , "ĳ", "ɟ" */, "ȉ", "ȋ", "ḭ", "ḯ")));
-		conversionMap.add(createEntry("ij", createList("ĳ")));
-		conversionMap.add(createEntry("j", createList("ǰ", "ĵ", "ʝ", "ȷ", "ɉ")));
-		conversionMap.add(createEntry("k", createList("ķ", "ḳ", "ƙ", "ḵ", "ĸ", "ʞ", "ḱ")));
-		conversionMap.add(createEntry("l", createList("ĺ", "ƚ", "ɬ", "ľ", "ļ", "ḽ", "ḷ", "ḹ", "ḻ", "ŀ", "ɫ", "ɭ", "ł", "ȴ")));
-		conversionMap.add(createEntry("lz", createList("ɮ", "ʫ")));
-		conversionMap.add(createEntry("lj", createList("ǉ")));
-		conversionMap.add(createEntry("ls", createList("ʪ")));
-		conversionMap.add(createEntry("m", createList("ḿ", "ṁ", "ṃ", "ɱ", "ɯ", "ɰ")));
-		conversionMap.add(createEntry("n", createList("ŉ", "ń", "ň", "ņ", "ṋ", "ṅ", "ṇ", "ǹ", "ɲ", "ṉ", "ɳ", "ñ", "ŋ", "ƞ", "ȵ")));
-		conversionMap.add(createEntry("nj", createList("ǌ")));
-		conversionMap.add(createEntry("o", createList("ó", "ŏ", "ǒ", "ô", "ố", "ộ", "ồ", "ổ", "ỗ", "ö", "ọ", "ő", "ò", "ỏ", "ơ", "ớ", "ợ", "ờ", "ở", "ỡ", "ō", "ǫ", "ø", "ǿ", "õ", "ɛ", "ɔ", "ɵ", "ʘ"/* , "œ" */, "ǭ", "ȍ", "ȏ", "ȫ", "ȭ", "ȯ", "ȱ")));
-		conversionMap.add(createEntry("oe", createList("œ")));
-		conversionMap.add(createEntry("p", createList("ɸ", "þ", "ƥ")));
-		conversionMap.add(createEntry("q", createList("ʠ", "Ƣ", "ƣ", "Ɋ", "ɋ")));
-		conversionMap.add(createEntry("qp", createList("ȹ")));
-		conversionMap.add(createEntry("r", createList("ŕ", "ř", "ŗ", "ṙ", "ṛ", "ṝ", "ɾ", "ṟ", "ɼ", "ɽ", "ɿ", "ɹ", "ɻ", "ɺ", "ȑ", "ȓ", "ɍ")));
-		conversionMap.add(createEntry("s", createList("ś", "š", "ş", "ŝ", "ș", "ṡ", "ṣ", "ʂ", "ƨ", "ȿ")));
-		conversionMap.add(createEntry("ss", createList("ß")));
-		conversionMap.add(createEntry("t", createList("ť", "ţ", "ṱ", "ț", "ẗ", "ṭ", "ṯ", "ʈ", "ŧ", "ƫ", "ʇ", "ȶ")));
-		conversionMap.add(createEntry("tc", createList("ʨ")));
-		conversionMap.add(createEntry("ts", createList("ʦ")));
-		conversionMap.add(createEntry("tf", createList("ʧ")));
-		conversionMap.add(createEntry("u", createList("ʉ", "ú", "ŭ", "ǔ", "û", "ü", "ǘ", "ǚ", "ǜ", "ǖ", "ụ", "ű", "ù", "ủ", "ư", "ứ", "ự", "ừ", "ử", "ữ", "ū", "ų", "ů", "ũ", "ʊ", "ȕ", "ȗ")));
-		conversionMap.add(createEntry("v", createList("ʋ", "ʌ")));
-		conversionMap.add(createEntry("w", createList("ẃ", "ŵ", "ẅ", "ẁ", "ʍ")));
-		conversionMap.add(createEntry("y", createList("ý", "ŷ", "ÿ", "ẏ", "ỵ", "ỳ", "ƴ", "ỷ", "ȳ", "ỹ", "ʎ", "ƛ", "ɣ", "ƛ", "ɏ")));
-		conversionMap.add(createEntry("z", createList("ź", "ž", "ʑ", "ż", "ẓ", "ẕ", "ʐ", "ƶ", "ȥ", "ɀ")));
-		// </editor-fold>
-
-		// <editor-fold desc="Numbers"> - 6
-		conversionMap.add(createEntry("0", createList("Ø", "ø", "⌀", "∅")));
-		conversionMap.add(createEntry("1", createList("ı")));
-		conversionMap.add(createEntry("2", createList("ƻ")));
-		conversionMap.add(createEntry("3", createList("ʒ", "Ȝ", "Ʒ", "Ƹ", "ƹ", "ƺ", "Ǯ", "ǯ")));
-		conversionMap.add(createEntry("5", createList("Ƽ", "ƽ", "ƾ")));
-		conversionMap.add(createEntry("8", createList("Ȣ", "ȣ")));
-		// </editor-fold>
-
-		MultiThreading.submitRunnables(work);
-
 		// http://pinyin.info/unicode/diacritics.html //
 		// https://unicode-table.com/en/#latin-extended-b //
 		// https://unicode-table.com/en/#latin-extended-additional //
 		// https://unicode-table.com/en/#greek-extended //
+
+		if (diacritics_simplified == null)
+		{
+			diacritics_simplified = new HashMap<>(77);
+
+			// <editor-fold desc="Capital-case alphabets"> - 36
+			diacritics_simplified.put("A", createList("Á", "Ă", "Ắ", "Ặ", "Ằ", "Ẳ", "Ẵ", "Ǎ", "Â", "Ấ", "Ậ", "Ầ", "Ẩ", "Ẫ", "Ä", "Ạ", "À", "Ả", "Ā", "Ą", "Å", "Ǻ", "Ã", "Ǟ", "Ǡ", "Ȁ", "Ȃ", "Ȧ", "Ⱥ", "Ḁ"));
+			diacritics_simplified.put("AE", createList("Æ", "Ǽ", "Ǣ"));
+			diacritics_simplified.put("B", createList("Ḅ", "Ɓ", "Ƀ", "Ḃ", "Ḅ", "Ḇ"));
+			diacritics_simplified.put("C", createList("Ć", "Č", "Ç", "Ĉ", "Ċ", "Ȼ", "Ḉ"));
+			diacritics_simplified.put("D", createList("Ď", "Ḓ", "Ḍ", "Ḏ", "Ḋ", "ḋ", "Ḑ", "ḑ", "Đ", "Ð", "Ɖ"));
+			diacritics_simplified.put("DZ", createList("Ǳ", "Ǆ"));
+			diacritics_simplified.put("Dz", createList("ǲ", "ǅ"));
+			diacritics_simplified.put("E", createList("É", "Ĕ", "Ě", "Ê", "Ế", "Ệ", "Ề", "Ể", "Ễ", "Ë", "Ė", "Ẹ", "È", "Ẻ", "Ē", "Ę", "Ẽ", "Ȅ", "Ȇ", "Ȩ", "Ɇ", "Ḕ", "Ḗ", "Ḙ", "Ḛ", "Ḝ"));
+			diacritics_simplified.put("F", createList("Ƒ", "Ḟ"));
+			diacritics_simplified.put("G", createList("Ǵ", "Ğ", "Ǧ", "Ģ", "Ĝ", "Ġ", "Ḡ", "ʛ", "Ɠ", "Ǥ"));
+			diacritics_simplified.put("H", createList("Ḫ", "Ĥ", "Ḥ", "Ħ", "Ḣ", "Ḧ", "Ḩ"));
+			diacritics_simplified.put("Hu", createList("Ƕ"));
+			diacritics_simplified.put("Hb", createList("Њ"));
+			diacritics_simplified.put("I", createList("Í", "Ĭ", "Ǐ", "Î", "Ï", "İ", "Ị", "Ì", "Ỉ", "Ī", "Į", "Ĩ", "Ɨ", "Ȉ", "Ȋ"));
+			diacritics_simplified.put("IJ", createList("Ĳ"));
+			diacritics_simplified.put("II", createList("ǁ"));
+			diacritics_simplified.put("J", createList("Ĵ", "Ɉ"));
+			diacritics_simplified.put("K", createList("Ķ", "Ḳ", "Ḵ", "Ḱ", "ĸ"));
+			diacritics_simplified.put("L", createList("Ĺ", "Ƚ", "Ľ", "Ļ", "Ḽ", "Ḷ", "Ḹ", "Ḻ", "Ŀ", "Ł"));
+			diacritics_simplified.put("LJ", createList("Ǉ"));
+			diacritics_simplified.put("Lj", createList("ǈ"));
+			diacritics_simplified.put("M", createList("Ḿ", "Ṁ", "Ṃ"));
+			diacritics_simplified.put("N", createList("Ń", "Ň", "Ņ", "Ṋ", "Ṅ", "Ṇ", "Ǹ", "Ɲ", "Ŋ", "Ṉ", "Ñ"));
+			diacritics_simplified.put("NJ", createList("Ǌ"));
+			diacritics_simplified.put("Nj", createList("ǋ"));
+			diacritics_simplified.put("O", createList("Ó", "Ŏ", "Ǒ", "Ô", "Ố", "Ộ", "Ồ", "Ổ", "Ỗ", "Ö", "Ọ", "Ő", "Ò", "Ỏ", "Ơ", "Ớ", "Ợ", "Ờ", "Ở", "Ỡ", "Ō", "Ɵ", "Ǫ", "Ø", "Ǿ", "Õ" /* , "Œ", "ɶ" */, "Ǭ", "Ȍ", "Ȏ", "Ȫ", "Ȭ", "Ȯ", "Ȱ"));
+			diacritics_simplified.put("OE", createList("Œ", "ɶ")); // It's 'OE' don't be confused with 'CE'.
+			diacritics_simplified.put("P", createList("Ƥ"));
+			diacritics_simplified.put("R", createList("Ŕ", "Ř", "Ŗ", "Ṙ", "Ṛ", "Ṝ", "Ṟ", "Ȑ", "Ȓ", "Ɍ"));
+			diacritics_simplified.put("S", createList("Ś", "Š", "Ş", "Ŝ", "Ș", "Ṡ", "Ṣ"));
+			diacritics_simplified.put("T", createList("Ť", "Ţ", "Ṱ", "Ț", "Ṭ", "Ṯ", "Ŧ", "Ⱦ"));
+			diacritics_simplified.put("U", createList("Ú", "Ŭ", "Ǔ", "Û", "Ü", "Ǘ", "Ǚ", "Ǜ", "Ǖ", "Ụ", "Ű", "Ù", "Ủ", "Ư", "Ứ", "Ự", "Ừ", "Ử", "Ữ", "Ū", "Ų", "Ů", "Ũ", "Ȕ", "Ȗ", "Ʉ"));
+			diacritics_simplified.put("W", createList("Ẃ", "Ŵ", "Ẅ", "Ẁ"));
+			diacritics_simplified.put("Y", createList("Ý", "Ŷ", "Ÿ", "Ẏ", "Ỵ", "Ỳ", "Ƴ", "Ỷ", "Ȳ", "Ỹ", "Ɏ"));
+			diacritics_simplified.put("Z", createList("Ź", "Ž", "Ż", "Ẓ", "Ẕ", "Ƶ"));
+			// </editor-fold>
+
+			// <editor-fold desc="Lower-case alphabets"> - 44
+			diacritics_simplified.put("a", createList("á", "ă", "ắ", "ặ", "ằ", "ą", "ẳ", "ẵ", "ǎ", "ḁ", "â", "ấ", "ậ", "ầ", "ẩ", "ẫ", "ä", "ạ", "à", "ả", "ā", "å", "ǻ", "ã", "ǟ", "ǡ", "ȁ", "ȃ", "ȧ"));
+			diacritics_simplified.put("ae", createList("æ", "ǽ", "ǣ"));
+			diacritics_simplified.put("b", createList("ḅ", "ḃ", "ḅ", "ḇ"));
+			diacritics_simplified.put("c", createList("ć", "č", "ç", "ĉ", "ċ", "ȼ", "ḉ"));
+			diacritics_simplified.put("ce", createList("œ"));
+			diacritics_simplified.put("d", createList("ď", "ḓ", "ḍ", "ḏ", "đ", "ḋ", "ḑ"));
+			diacritics_simplified.put("dz", createList("ǳ", "ʣ", "ʥ", "ǆ"));
+			diacritics_simplified.put("e", createList("é", "ĕ", "ě", "ê", "ế", "ệ", "ề", "ể", "ḕ", "ḗ", "ḝ", "ḛ", "ḙ", "ễ", "ë", "ė", "ẹ", "è", "ẻ", "ē", "ę", "ẽ", "ȅ", "ȇ", "ȩ", "ɇ"));
+			diacritics_simplified.put("f", createList("ƒ", "ḟ"));
+			diacritics_simplified.put("fi", createList("ﬁ"));
+			diacritics_simplified.put("fl", createList("ﬂ"));
+			diacritics_simplified.put("g", createList("ǵ", "ğ", "ǧ", "ģ", "ĝ", "ġ", "ḡ", "ɡ", "ǥ"));
+			diacritics_simplified.put("h", createList("ḫ", "ĥ", "ḥ", "ẖ", "ħ", "ḣ", "ḧ", "ḩ"));
+			diacritics_simplified.put("hv", createList("ƕ"));
+			diacritics_simplified.put("i", createList("í", "ĭ", "ǐ", "î", "ï", "ị", "ì", "ỉ", "ī", "į", "ɨ", "ĩ", "ı", "ȉ", "ȋ", "ḭ", "ḯ"));
+			diacritics_simplified.put("ij", createList("ĳ"));
+			diacritics_simplified.put("j", createList("ǰ", "ĵ", "ȷ", "ɉ"));
+			diacritics_simplified.put("k", createList("ķ", "ḳ", "ḵ", "ḱ"));
+			diacritics_simplified.put("l", createList("ĺ", "ƚ", "ɬ", "ľ", "ļ", "ḽ", "ḷ", "ḹ", "ḻ", "ŀ", "ɫ", "ł"));
+			diacritics_simplified.put("lz", createList("ʫ"));
+			diacritics_simplified.put("lj", createList("ǉ"));
+			diacritics_simplified.put("ls", createList("ʪ"));
+			diacritics_simplified.put("m", createList("ḿ", "ṁ", "ṃ"));
+			diacritics_simplified.put("n", createList("ŉ", "ń", "ň", "ņ", "ṋ", "ṅ", "ṇ", "ǹ", "ṉ", "ñ"));
+			diacritics_simplified.put("nj", createList("ǌ"));
+			diacritics_simplified.put("o", createList("ó", "ŏ", "ǒ", "ô", "ố", "ộ", "ồ", "ổ", "ỗ", "ö", "ọ", "ő", "ò", "ỏ", "ơ", "ớ", "ợ", "ờ", "ở", "ỡ", "ō", "ǫ", "ø", "ǿ", "õ", "ɵ", "ʘ", "ǭ", "ȍ", "ȏ", "ȫ", "ȭ", "ȯ", "ȱ"));
+			diacritics_simplified.put("oe", createList("œ"));
+			diacritics_simplified.put("r", createList("ŕ", "ř", "ŗ", "ṙ", "ṛ", "ṝ", "ṟ", "ɼ", "ȑ", "ȓ", "ɍ"));
+			diacritics_simplified.put("s", createList("ś", "š", "ş", "ŝ", "ș", "ṡ", "ṣ"));
+			diacritics_simplified.put("t", createList("ť", "ţ", "ṱ", "ț", "ẗ", "ṭ", "ṯ", "ʈ", "ŧ"));
+			diacritics_simplified.put("ts", createList("ʦ"));
+			diacritics_simplified.put("u", createList("ʉ", "ú", "ŭ", "ǔ", "û", "ü", "ǘ", "ǚ", "ǜ", "ǖ", "ụ", "ű", "ù", "ủ", "ư", "ứ", "ự", "ừ", "ử", "ữ", "ū", "ų", "ů", "ũ", "ȕ", "ȗ"));
+			diacritics_simplified.put("w", createList("ẃ", "ŵ", "ẅ", "ẁ"));
+			diacritics_simplified.put("y", createList("ý", "ŷ", "ÿ", "ẏ", "ỵ", "ỳ", "ƴ", "ỷ", "ȳ", "ỹ", "ɏ"));
+			diacritics_simplified.put("z", createList("ź", "ž", "ʑ", "ż", "ẓ", "ẕ", "ƶ"));
+			// </editor-fold>
+
+			// <editor-fold desc="Numbers"> - 6
+			diacritics_simplified.put("0", createList("Ø", "ø", "⌀", "∅"));
+			diacritics_simplified.put("1", createList("ı"));
+			diacritics_simplified.put("2", createList("ƻ"));
+			diacritics_simplified.put("3", createList("ʒ", "Ʒ", "Ǯ", "ǯ"));
+			diacritics_simplified.put("5", createList("Ƽ"));
+			// </editor-fold>
+		}
+
+		// ADVANCED
+		if (diacritics == null)
+		{
+			final Map<String, List<String>> _diacritics = new HashMap<>(50);
+
+			_diacritics.put("A", createList("Ʌ"));
+			_diacritics.put("B", createList("ʚ", "ɞ", "Ƃ", "Ƅ"));
+			_diacritics.put("C", createList("Ɔ", "ʗ", "Ƈ"));
+			_diacritics.put("D", createList("Ɗ", "Ƌ", "ƿ"));
+			_diacritics.put("E", createList("Ɛ", "Ə", "Ǝ", "Ʃ"));
+			_diacritics.put("I", createList("ǀ", "ǂ", "Ḭ", "Ḯ"));
+			_diacritics.put("K", createList("Ƙ"));
+			_diacritics.put("M", createList("Ɯ"));
+			_diacritics.put("P", createList("Þ", "Ƿ"));
+			_diacritics.put("R", createList("ʁ", "Ʀ"));
+			_diacritics.put("S", createList("Ƨ"));
+			_diacritics.put("SS", createList("ẞ"));
+			_diacritics.put("T", createList("Ƭ", "Ʈ"));
+			_diacritics.put("U", createList("Ʊ", "Ʋ"));
+			_diacritics.put("Y", createList("Ɣ"));
+			_diacritics.put("Z", createList("Ȥ"));
+
+			_diacritics.put("a", createList("ɑ", "ɐ", "ɒ"));
+			_diacritics.put("b", createList("ɓ", "ß", "ƀ", "ƃ", "ƅ"));
+			_diacritics.put("c", createList("ɕ"));
+			_diacritics.put("d", createList("ɗ", "ð", "ɖ", "ƌ", "ȡ"));
+			_diacritics.put("db", createList("ȸ"));
+			_diacritics.put("dz", createList("ʤ"));
+			_diacritics.put("e", createList("ʒ", "ǯ", "ʓ", "ɘ", "ɜ", "ɝ", "ə", "ɚ", "ʚ", "ɞ", "ǝ"));
+			_diacritics.put("f", createList("ſ", "ʃ", "ʆ", "ɟ", "ʄ", "ƭ"));
+			_diacritics.put("fn", createList("ʩ"));
+			_diacritics.put("g", createList("ɠ"));
+			_diacritics.put("h", createList("ɦ", "ɧ", "ɥ", "ʮ", "ʯ"));
+			_diacritics.put("i", createList("ɩ"));
+			_diacritics.put("j", createList("ʝ"));
+			_diacritics.put("k", createList("ƙ", "ʞ"));
+			_diacritics.put("l", createList("ɭ", "ȴ"));
+			_diacritics.put("lz", createList("ɮ"));
+			_diacritics.put("m", createList("ɱ", "ɯ", "ɰ"));
+			_diacritics.put("n", createList("ɲ", "ɳ", "ŋ", "ƞ", "ȵ", "Ƞ"));
+			_diacritics.put("p", createList("þ", "ƥ"));
+			_diacritics.put("q", createList("ʠ", "Ƣ", "ƣ", "Ɋ", "ɋ"));
+			_diacritics.put("qp", createList("ȹ"));
+			_diacritics.put("r", createList("ɾ", "ɽ", "ɿ", "ɹ", "ɻ", "ɺ"));
+			_diacritics.put("s", createList("ʂ", "ƨ", "ȿ"));
+			_diacritics.put("ss", createList("ß"));
+			_diacritics.put("t", createList("ƫ", "ʇ", "ȶ"));
+			_diacritics.put("tc", createList("ʨ"));
+			_diacritics.put("tf", createList("ʧ"));
+			_diacritics.put("u", createList("ʊ"));
+			_diacritics.put("v", createList("ʋ", "ʌ"));
+			_diacritics.put("w", createList("ʍ"));
+			_diacritics.put("y", createList("ʎ", "ƛ", "ɣ", "ƛ"));
+			_diacritics.put("z", createList("ʐ", "ȥ", "ɀ"));
+
+			_diacritics.put("3", createList("Ȝ", "Ƹ", "ƹ", "ƺ"));
+			_diacritics.put("5", createList("ƽ", "ƾ"));
+			_diacritics.put("8", createList("Ȣ", "ȣ"));
+
+			diacritics = mergeMap(diacritics_simplified, _diacritics);
+		}
+	}
+
+	private static Map<String, List<String>> mergeMap(final Map<String, List<String>> firstSource, final Map<String, List<String>> secondSource)
+	{
+		final Map<String, List<String>> result = new HashMap<>();
+
+		for (final Entry<String, List<String>> entry : firstSource.entrySet())
+			result.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+
+		for (final Entry<String, List<String>> entry : secondSource.entrySet())
+			if (result.containsKey(entry.getKey()))
+				result.get(entry.getKey()).addAll(entry.getValue());
+			else
+				result.put(entry.getKey(), entry.getValue());
+
+		return result;
+	}
+
+	private static void applyLeetspeakSimplified(final Collection<? super Entry<String, List<String>>> conversionMap)
+	{
+		initializeLeetspeak();
+		conversionMap.addAll(leetspeak_simplified.entrySet());
+	}
+
+	private static void applyLeetspeak(final Collection<? super Entry<String, List<String>>> conversionMap)
+	{
+		initializeLeetspeak();
+		conversionMap.addAll(leetspeak.entrySet());
+	}
+
+	private static void applyDiacriticsSimplified(final Collection<? super Entry<String, List<String>>> conversionMap)
+	{
+		initializeDiacritics();
+		conversionMap.addAll(diacritics_simplified.entrySet());
+	}
+
+	private static void applyDiacritics(final Collection<? super Entry<String, List<String>>> conversionMap)
+	{
+		initializeDiacritics();
+		conversionMap.addAll(diacritics.entrySet());
 	}
 
 	private static void applyFakeRussian(final Collection<? super Entry<String, List<String>>> conversionMap)
