@@ -94,6 +94,12 @@ public class LEACipher extends AbstractCipher
 	}
 
 	@Override
+	public boolean requirePaddedInput()
+	{
+		return super.requirePaddedInput() || mode == CipherMode.CFB;
+	}
+
+	@Override
 	public int getBlockSize()
 	{
 		return 16;

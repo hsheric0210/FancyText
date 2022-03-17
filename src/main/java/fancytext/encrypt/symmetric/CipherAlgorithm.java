@@ -29,7 +29,7 @@ public enum CipherAlgorithm
 
 	ChaCha("CHACHA", "ChaCha", 64, 96, 128, "BC", true, true, 128, 256),
 	ChaCha7539("CHACHA7539", "ChaCha-7539", 96, 96, 128, "BC", true, true, 256),
-	ChaChaP1305("CHACHA20-POLY1305", "ChaCha-Poly1305", -1, -1, -1, 96, 128, CipherMode.NO_MODE_SUPPORT, CipherPadding.BC_DEFAULT, "BC", true, false, 256),
+	ChaChaP1305("CHACHA20-POLY1305", "ChaCha20-Poly1305", -1, -1, -1, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false, 256),
 
 	DSTU7624("DSTU7624", "DSTU7624 (Kalyna)", -1, -1, -1, 96, 128, CipherMode.BC_DEFAULT_NO_AEAD, CipherPadding.BC_DEFAULT, "BC", true, false, 128, 256, 512),
 	GOST3412_2015("GOST3412-2015", "GOST R 34.12-2015 (Kuznyechik)", 128, 96, 128, CipherMode.BC_DEFAULT, CipherPadding.BC_DEFAULT, "BC", true, false, 256),
@@ -75,11 +75,11 @@ public enum CipherAlgorithm
 
 	LEA("LEA", "LEA: Lightweight Encryption Algorithm", 128, 8, 16, new CipherMode[]
 	{
-			CipherMode.ECB, CipherMode.CBC, CipherMode.CFB, CipherMode.OFB, CipherMode.CTS, CipherMode.CCM, CipherMode.GCM
+			CipherMode.ECB, CipherMode.CBC, CipherMode.CFB, CipherMode.OFB, CipherMode.CCM, CipherMode.GCM
 	}, new CipherPadding[]
 	{
 			CipherPadding.NONE, CipherPadding.PKCS7
-	}, null, true, true, 128, 256);
+	}, null, true, false, 128, 256);
 
 	private final String id;
 	private final String displayName;
