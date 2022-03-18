@@ -45,6 +45,9 @@ enum ConversionTablePresets
 			case DIACRITICS:
 				applyDiacritics(conversionMap);
 				break;
+			case FAKE_RUSSIAN_SIMPLIFIED:
+				applyFakeRussianSimplified(conversionMap);
+				break;
 			case FAKE_RUSSIAN:
 				applyFakeRussian(conversionMap);
 				break;
@@ -58,6 +61,9 @@ enum ConversionTablePresets
 	private static Map<String, List<String>> leetspeak;
 	private static Map<String, List<String>> diacritics_simplified;
 	private static Map<String, List<String>> diacritics;
+	private static Map<String, List<String>> fake_russian_simplified;
+	private static Map<String, List<String>> fake_russian;
+
 
 	private static void initializeLeetspeak()
 	{
@@ -318,6 +324,95 @@ enum ConversionTablePresets
 		}
 	}
 
+	private static void initializeFakeRussian()
+	{
+		// https://jkirchartz.com/demos/fake_russian_generator.html
+
+		if (fake_russian_simplified == null)
+		{
+			fake_russian_simplified = new HashMap<>(36);
+
+			fake_russian_simplified.put("A", createList("Д", "д", "Ӑ", "Ӓ"));
+			fake_russian_simplified.put("AE", createList("Ӕ"));
+			fake_russian_simplified.put("C", createList("Ҫ", "ҫ"));
+			fake_russian_simplified.put("E", createList("Є", "Ё", "Ӗ", "ԑ", "є"));
+			fake_russian_simplified.put("G", createList("Ԍ", "ԍ"));
+			fake_russian_simplified.put("F", createList("Ғ", "ғ"));
+			fake_russian_simplified.put("H", createList("Ҥ", "ҥ", "Ӊ", "ӊ", "Ң", "ң", "Ȟ", "н"));
+			fake_russian_simplified.put("I", createList("Ї"));
+			fake_russian_simplified.put("J", createList("Ј"));
+			fake_russian_simplified.put("JX", createList("Ԕ", "ԕ"));
+			fake_russian_simplified.put("K", createList("Қ", "қ", "Ҡ", "ҡ", "Ҝ", "ҝ", "Ԟ", "ԟ", "Ҟ", "Ќ", "к", "ќ"));
+			fake_russian_simplified.put("M", createList("м", "Ӎ", "ӎ"));
+			fake_russian_simplified.put("N", createList("И", "Ѝ", "Й", "и", "й", "ѝ", "Ҋ", "ҋ", "Ӣ", "ӣ", "Ӥ", "ӥ"));
+			fake_russian_simplified.put("O", createList("Ф", "Ѳ", "Ѻ", "Ӧ", "Ө", "Ӫ"));
+			fake_russian_simplified.put("P", createList("Ҏ"));
+			fake_russian_simplified.put("R", createList("Я", "я"));
+			fake_russian_simplified.put("RE", createList("Ԙ"));
+			fake_russian_simplified.put("Re", createList("ԙ"));
+			fake_russian_simplified.put("T", createList("Ҭ", "ҭ", "т"));
+			fake_russian_simplified.put("U", createList("Ц", "Џ", "џ"));
+			fake_russian_simplified.put("V", createList("Ѵ", "Ѷ"));
+			fake_russian_simplified.put("W", createList("Ш", "Щ"));
+			fake_russian_simplified.put("X", createList("Ӿ", "Ҳ", "Ӽ", "Ж", "Ӂ", "Ӝ", "ж", "Җ", "җ"));
+			fake_russian_simplified.put("Y", createList("Ч", "Ҷ", "ҷ", "Ӌ", "ӌ", "Ҹ", "ҹ", "Ұ", "ұ", "Ў"));
+			fake_russian_simplified.put("Oy", createList("Ѹ", "ѹ"));
+
+			fake_russian_simplified.put("a", createList("ӑ", "ӓ"));
+			fake_russian_simplified.put("ae", createList("ӕ"));
+			fake_russian_simplified.put("b", createList("Ъ", "Ь", "ь", "Ѣ", "ѣ", "Ҍ", "ҍ"));
+			fake_russian_simplified.put("bl", createList("Ы", "ы", "Ӹ", "ӹ"));
+			fake_russian_simplified.put("co", createList("ҩ"));
+			fake_russian_simplified.put("d", createList("Ԁ"));
+			fake_russian_simplified.put("e", createList("ё", "Ҽ", "ҽ", "ѐ", "Ҿ", "ҿ", "ё", "ӗ"));
+			fake_russian_simplified.put("h", createList("Һ", "һ", "ȟ", "Ԧ", "ԧ", "Ћ", "ћ"));
+			fake_russian_simplified.put("i", createList("ї"));
+			fake_russian_simplified.put("k", createList("ҟ"));
+			fake_russian_simplified.put("n", createList("л", "П", "п", "Л", "Ԥ", "ԥ", "Ԯ", "ԯ"));
+			fake_russian_simplified.put("nb", createList("љ"));
+			fake_russian_simplified.put("o", createList("ѳ", "ѻ", "ӧ", "ө", "ӫ"));
+			fake_russian_simplified.put("p", createList("ҏ"));
+			fake_russian_simplified.put("u", createList("ц"));
+			fake_russian_simplified.put("v", createList("ѵ", "ѷ"));
+			fake_russian_simplified.put("w", createList("ш", "щ", "ѡ"));
+			fake_russian_simplified.put("x", createList("ҳ", "ӽ", "ӿ", "ж", "ӂ", "ӝ"));
+			fake_russian_simplified.put("y", createList("У", "У̃", "Ӯ", "Ӱ", "Ӳ", "у", "у̃", "ӯ", "ӱ", "ӳ", "ч", "ў", "Ӵ", "ӵ"));
+			fake_russian_simplified.put("3", createList("э", "З", "Ҙ", "ҙ", "Ӟ", "ӟ", "Ӡ", "ӡ", "Ӭ", "ӭ"));
+			fake_russian_simplified.put("6", createList("Б", "б"));
+		}
+
+		// ADVANCED
+		if (fake_russian == null)
+		{
+			final Map<String, List<String>> _fake_russian = new HashMap<>(21);
+
+			_fake_russian.put("A", createList("Ѧ", "ѧ"));
+			_fake_russian.put("B", createList("Б"));
+			_fake_russian.put("Co", createList("Ҩ"));
+			_fake_russian.put("E", createList("Ԑ", "Э", "э"));
+			_fake_russian.put("F", createList("Ӻ", "ӻ"));
+			_fake_russian.put("H", createList("Ӈ", "ӈ", "Ԩ", "ԩ"));
+			_fake_russian.put("Hb", createList("Њ", "њ"));
+			_fake_russian.put("Hu", createList("Ԋ", "ԋ"));
+			_fake_russian.put("Hj", createList("Ԣ", "ԣ"));
+			_fake_russian.put("K", createList("Ӄ", "ӄ"));
+			_fake_russian.put("M", createList("Ԡ", "ԡ", "Ҧ", "ҧ"));
+			_fake_russian.put("T", createList("Г", "Ґ", "ґ", "Ѓ", "ѓ", "Ӷ", "ӷ"));
+			_fake_russian.put("U", createList("Ҵ"));
+			_fake_russian.put("W", createList("Ѱ"));
+
+			_fake_russian.put("d", createList("Ԃ", "ԃ"));
+			_fake_russian.put("e", createList("Ә", "ә", "Ӛ", "ӛ"));
+			_fake_russian.put("h", createList("Ђ", "ђ", "Ҕ", "ҕ"));
+			_fake_russian.put("n", createList("ԉ", "Ԉ", "Ԓ", "ԓ"));
+			_fake_russian.put("nb", createList("љ"));
+			_fake_russian.put("u", createList("ҵ"));
+			_fake_russian.put("w", createList("ѱ"));
+
+			fake_russian = mergeMap(fake_russian_simplified, _fake_russian);
+		}
+	}
+
 	private static Map<String, List<String>> mergeMap(final Map<String, List<String>> firstSource, final Map<String, List<String>> secondSource)
 	{
 		final Map<String, List<String>> result = new HashMap<>();
@@ -358,69 +453,16 @@ enum ConversionTablePresets
 		conversionMap.addAll(diacritics.entrySet());
 	}
 
+	private static void applyFakeRussianSimplified(final Collection<? super Entry<String, List<String>>> conversionMap)
+	{
+		initializeFakeRussian();
+		conversionMap.addAll(fake_russian_simplified.entrySet());
+	}
+
 	private static void applyFakeRussian(final Collection<? super Entry<String, List<String>>> conversionMap)
 	{
-		final Collection<Runnable> work = new ArrayDeque<>(51);
-
-		// <editor-fold desc="Capital-case alphabets"> - 30
-		conversionMap.add(createEntry("A", createList("Д", "д", "Ѧ", "ѧ", "Ӑ", "Ӓ")));
-		conversionMap.add(createEntry("AE", createList("Ӕ")));
-		conversionMap.add(createEntry("B", createList("Б")));
-		conversionMap.add(createEntry("C", createList("Ҫ", "ҫ")));
-		conversionMap.add(createEntry("Co", createList("Ҩ")));
-		conversionMap.add(createEntry("E", createList("Ԑ", "Є", "Э", "Ё", "Ӗ")));
-		conversionMap.add(createEntry("G", createList("Ԍ", "ԍ")));
-		conversionMap.add(createEntry("F", createList("Ӻ", "ӻ", "Ғ", "ғ")));
-		conversionMap.add(createEntry("H", createList("Њ", "Ҥ", "ҥ", "Ӊ", "ӊ", "Ң", "ң", "Ӈ", "ӈ", "Ȟ", "Ԩ", "ԩ", "н")));
-		conversionMap.add(createEntry("Hb", createList("Њ", "њ")));
-		conversionMap.add(createEntry("Hu", createList("Ԋ", "ԋ")));
-		conversionMap.add(createEntry("Hj", createList("Ԣ", "ԣ")));
-		conversionMap.add(createEntry("I", createList("Ї")));
-		conversionMap.add(createEntry("J", createList("Ј")));
-		conversionMap.add(createEntry("JX", createList("Ԕ", "ԕ")));
-		conversionMap.add(createEntry("K", createList("Қ", "қ", "Ҡ", "ҡ", "Ҝ", "ҝ", "Ԟ", "ԟ", "Ҟ", "Ќ", "к", "ќ", "Ӄ", "ӄ")));
-		conversionMap.add(createEntry("M", createList("Ԡ", "ԡ", "м", "Ҧ", "ҧ", "Ӎ", "ӎ")));
-		conversionMap.add(createEntry("N", createList("И", "Ѝ", "Й", "и", "й", "ѝ", "Ҋ", "ҋ", "Ӣ", "ӣ", "Ӥ", "ӥ")));
-		conversionMap.add(createEntry("O", createList("Ф", "Ѳ", "Ѻ", "Ӧ", "Ө", "Ӫ")));
-		conversionMap.add(createEntry("P", createList("Ҏ")));
-		conversionMap.add(createEntry("R", createList("Я", "я")));
-		conversionMap.add(createEntry("RE", createList("Ԙ")));
-		conversionMap.add(createEntry("Re", createList("ԙ")));
-		conversionMap.add(createEntry("T", createList("Г", "Ґ", "ґ", "Ҭ", "ҭ", "Ѓ", "т", "ѓ", "Ӷ", "ӷ")));
-		conversionMap.add(createEntry("U", createList("Ц", "Џ", "џ", "Ҵ")));
-		conversionMap.add(createEntry("V", createList("Ѵ", "Ѷ")));
-		conversionMap.add(createEntry("W", createList("Ш", "Щ", "Ѱ")));
-		conversionMap.add(createEntry("X", createList("Ӿ", "Ҳ", "Ӽ", "Ж", "Ӂ", "Ӝ", "ж", "Җ", "җ")));
-		conversionMap.add(createEntry("Y", createList("Ч", "Ҷ", "ҷ", "Ӌ", "ӌ", "Ҹ", "ҹ", "Ұ", "ұ", "Ў")));
-		conversionMap.add(createEntry("Oy", createList("Ѹ", "ѹ")));
-
-		// Lower-case characters - 21
-		conversionMap.add(createEntry("a", createList("ӑ", "ӓ")));
-		conversionMap.add(createEntry("ae", createList("ӕ")));
-		conversionMap.add(createEntry("b", createList("Ъ", "Ь", "ь", "Ѣ", "ѣ", "Ҍ", "ҍ")));
-		conversionMap.add(createEntry("bl", createList("Ы", "ы", "Ӹ", "ӹ")));
-		conversionMap.add(createEntry("co", createList("ҩ")));
-		conversionMap.add(createEntry("d", createList("Ԃ", "ԃ", "Ԁ")));
-		conversionMap.add(createEntry("e", createList("ԑ", "є", "э", "ё", "Ҽ", "ҽ", "ѐ", "Ҿ", "ҿ", "ё", "ӗ", "Ә", "ә", "Ӛ", "ӛ")));
-		conversionMap.add(createEntry("h", createList("Һ", "һ", "ȟ", "Ԧ", "ԧ", "Ђ", "Ћ", "ћ", "ђ", "Ҕ", "ҕ")));
-		conversionMap.add(createEntry("i", createList("ї")));
-		conversionMap.add(createEntry("k", createList("ҟ")));
-		conversionMap.add(createEntry("n", createList("л", "П", "п", "ԉ", "Л", "Ԉ", "Ԓ", "ԓ", "Ԥ", "ԥ", "Ԯ", "ԯ")));
-		conversionMap.add(createEntry("nb", createList("љ")));
-		conversionMap.add(createEntry("o", createList("ѳ", "ѻ", "ӧ", "ө", "ӫ")));
-		conversionMap.add(createEntry("p", createList("ҏ")));
-		conversionMap.add(createEntry("u", createList("ц", "ҵ")));
-		conversionMap.add(createEntry("v", createList("ѵ", "ѷ")));
-		conversionMap.add(createEntry("w", createList("ш", "щ", "ѡ", "ѱ")));
-		conversionMap.add(createEntry("x", createList("ҳ", "ӽ", "ӿ", "ж", "ӂ", "ӝ")));
-		conversionMap.add(createEntry("y", createList("У", "У̃", "Ӯ", "Ӱ", "Ӳ", "у", "у̃", "ӯ", "ӱ", "ӳ", "ч", "ў", "Ӵ", "ӵ")));
-		conversionMap.add(createEntry("3", createList("ԑ", "є", "э", "З", "Ҙ", "ҙ", "Ӟ", "ӟ", "Ӡ", "ӡ", "Ӭ", "ӭ")));
-		conversionMap.add(createEntry("6", createList("Б", "б")));
-		// </editor-fold>
-
-		MultiThreading.submitRunnables(work);
-
-		// https://jkirchartz.com/demos/fake_russian_generator.html
+		initializeFakeRussian();
+		conversionMap.addAll(fake_russian.entrySet());
 	}
 
 	private static void applyCurrencySymbols(final Collection<? super Entry<String, List<String>>> conversionMap)
